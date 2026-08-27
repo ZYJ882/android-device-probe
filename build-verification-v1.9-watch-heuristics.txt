@@ -1,0 +1,50 @@
+== APK SHA-256 ==
+bbfb6679efe4767a9db9b411e12a00a0bd7c55c7bb6a56b4e1c90a2bdb98f625  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== APK identity ==
+package: name='com.deviceprobe.inspector' versionCode='10' versionName='1.9.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Watch confidence and override implementation ==
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:    enum Confidence { CONFIRMED, SUSPECTED, STANDARD, MANUAL }
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        boolean round = Build.VERSION.SDK_INT >= 23 && config.isScreenRound();
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:            automaticConfidence = Confidence.CONFIRMED;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        } else if (uiMode == Configuration.UI_MODE_TYPE_WATCH) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:            automaticConfidence = Confidence.CONFIRMED;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:            automaticConfidence = Confidence.CONFIRMED;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:            automaticConfidence = Confidence.CONFIRMED;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:                automaticConfidence = Confidence.SUSPECTED;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:                automaticConfidence = Confidence.SUSPECTED;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:                return new DeviceProfile(selected, automaticKind, Confidence.MANUAL, automaticConfidence, metrics, config, round,
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:    static void saveOverride(Context context, Kind kindOrNull) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:    int selectedModeIndex() {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:    boolean isSuspectedWatch() { return kind == Kind.WATCH && confidence == Confidence.SUSPECTED; }
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        if (confidence == Confidence.MANUAL) return humanName(kind) + "（用户已手动选择）";
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        if (confidence == Confidence.CONFIRMED) return humanName(kind) + "（系统已确认）";
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        if (confidence == Confidence.SUSPECTED) return "疑似 Android 手表（组合线索）";
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        if (confidence == Confidence.CONFIRMED) return humanName(kind) + "（系统特性/UI 模式确认）";
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        if (confidence == Confidence.SUSPECTED) return "疑似 Android 手表（非标准系统组合线索）";
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:                .setSingleChoiceItems(modes, deviceProfile.selectedModeIndex(), (dialog, selected) -> {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:                    DeviceProfile.saveOverride(this, override);
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Legacy namespace ==
+PASS: no com.manus

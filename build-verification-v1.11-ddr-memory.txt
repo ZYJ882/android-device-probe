@@ -1,0 +1,68 @@
+== APK SHA-256 ==
+c24e219ff6899ae62a96d4d764fc5b7cc0893946156d532d3226d7d231170793  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== APK identity ==
+package: name='com.deviceprobe.inspector' versionCode='12' versionName='1.11.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== DDR detection source markers ==
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:static bool contains_memory_type_token(const char *value) {
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:static void append_devfreq_memory_candidates(char *report, size_t capacity) {
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    DIR *directory = opendir("/sys/class/devfreq");
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:        appendf(report, capacity, "devfreq 目录不可读: %s\n", strerror(errno));
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:        snprintf(path, sizeof(path), "/sys/class/devfreq/%s/name", name);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            appendf(report, capacity, "devfreq %s/name: %s\n", name, value);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            appendf(report, capacity, "devfreq 候选: %s\n", name);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:        snprintf(path, sizeof(path), "/sys/class/devfreq/%s/cur_freq", name);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:        if (read_text_file(path, value, sizeof(value)) == 0) appendf(report, capacity, "devfreq %s/cur_freq: %s\n", name, value);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:        snprintf(path, sizeof(path), "/sys/class/devfreq/%s/available_frequencies", name);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:        if (read_text_file(path, value, sizeof(value)) == 0) appendf(report, capacity, "devfreq %s/available_frequencies: %s\n", name, value);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    if (!found) appendf(report, capacity, "未发现当前应用可读的 DDR/DRAM/memory devfreq 候选节点。\n");
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:static void append_ddr_type_report(char *report, size_t capacity) {
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/firmware/devicetree/base/memory/ddr_type",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/firmware/devicetree/base/memory/dram_type",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/firmware/devicetree/base/memory/memory_type",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/firmware/devicetree/base/chosen/ddr_type",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/firmware/devicetree/base/chosen/memory_type",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/kernel/debug/ddr/ddr_type",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/kernel/debug/dram/dram_type",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/class/devfreq/ddr/type",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "/sys/class/devfreq/dram/type"
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    appendf(report, capacity, "\n[DDR 内存类型候选]\n");
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    appendf(report, capacity, "只在原始字段明确含 DDR、LPDDR 或 HBM 时确认类型；动态频率不等于 DDR 代际。\n");
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            if (!confirmed && contains_memory_type_token(value)) {
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:                appendf(report, capacity, "DDR 结论: %s（设备公开字段：%s）\n", value, paths[index]);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:        appendf(report, capacity, "DDR 结论: 无法从普通应用可靠确认（未发现明确的 DDR/LPDDR/HBM 原始类型字段）。\n");
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    appendf(report, capacity, "内存控制器/devfreq 候选（频率仅作性能信息，不用于推断 DDR 类型）：\n");
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    append_devfreq_memory_candidates(report, capacity);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    append_ddr_type_report(report, sizeof(report));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("DDR 内存类型依据", "只确认设备明确公开的 DDR/LPDDR/HBM 字段；频率不等于类型", nativeSection(nativeResult, "[DDR 内存类型候选]", "[电池 power_supply 原始节点]"), false, true);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String ddrRaw = nativeSection(nativeResult, "[DDR 内存类型候选]", "[电池 power_supply 原始节点]");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "内存控制器/动态频率候选", devfreqSummary(ddrRaw));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String value = keyValue(ddrRaw, "DDR 结论");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:    private static String devfreqSummary(String ddrRaw) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:            if (!value.startsWith("devfreq ")) continue;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:            String ddrRaw = nativeSection(nativeResult, "[DDR 内存类型候选]", "[电池 power_supply 原始节点]");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String memorySection = nativeSection(nativeResult, "[内存硬件厂商候选]", "[DDR 内存类型候选]");
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Legacy namespace ==
+PASS: no com.manus

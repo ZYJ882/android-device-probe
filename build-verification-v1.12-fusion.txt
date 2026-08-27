@@ -1,0 +1,44 @@
+== APK SHA-256 ==
+7f5cdbb5d148f8162759f07efb46cfba6796b166649e23725963f7b49f8d0953  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== APK identity ==
+package: name='com.deviceprobe.inspector' versionCode='13' versionName='1.12.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Fusion UI/source markers ==
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        root.addView(createCategoryNavigation(), marginParams(match(), wrap(), 0, dp(15), 0, 0));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        root.addView(createStatusDashboard(), marginParams(match(), wrap(), 0, dp(10), 0, 0));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        TextView screenTest = actionButton("屏幕测试", false);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:    private View createCategoryNavigation() {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:            case "能力": title = "硬件能力"; break;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:    private View createStatusDashboard() {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("硬件能力", "传感器、相机、触控、定位、无线与连接能力", CapabilityProbe.collect(this), false, false);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("功能测试", "坏点、触控、灰阶、拖影、PWM 辅助与色彩参考", buildFunctionTestSummary(), false, false);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        out.append("\n[硬件能力]\n").append(CapabilityProbe.collect(this));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        out.append("\n[功能测试]\n").append(buildFunctionTestSummary());
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:                + "点击首页“屏幕测试”进入。坏点、PWM、拖影、残影、视角与色域属于标准图案和人工/仪器观察项目；应用不会把观察结果伪装成自动硬件诊断。";
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/CapabilityProbe.java:public final class CapabilityProbe {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/CapabilityProbe.java:    private CapabilityProbe() { }
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/CapabilityProbe.java:        out.append("[硬件能力总览]\n");
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Legacy namespace ==
+PASS: no com.manus

@@ -1,0 +1,55 @@
+== APK SHA-256 ==
+40e2cd35c45803ea96eb026aa420ae872daf7a698e0b7797e3355f8804f2627e  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== Manifest ==
+package: name='com.deviceprobe.inspector' versionCode='8' versionName='1.7.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Screen test Activity ==
+      E: activity (line=20)
+        A: android:name(0x01010003)="com.deviceprobe.inspector.ScreenTestActivity" (Raw: "com.deviceprobe.inspector.ScreenTestActivity")
+        A: android:exported(0x01010010)=(type 0x12)0x0
+        A: android:screenOrientation(0x0101001e)=(type 0x10)0x1
+      E: activity (line=24)
+        A: android:name(0x01010003)="com.deviceprobe.inspector.MainActivity" (Raw: "com.deviceprobe.inspector.MainActivity")
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Pattern count and names ==
+    private static final String[] NAMES = {
+            "坏点 / 亮点 / 暗点",
+            "灰阶",
+            "对比度",
+            "色彩饱和度",
+            "触控",
+            "几何 / 边缘",
+            "RGB 渐变",
+            "闪烁辅助（PWM）",
+            "响应拖影",
+            "残影老化",
+            "色域参考",
+            "视角",
+            "色域检测"
+    };
+
+    private static final String[] HINTS = {
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Namespace ==
+PASS: no com.manus

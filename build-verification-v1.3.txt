@@ -1,0 +1,33 @@
+== APK SHA-256 ==
+c71bbb076c7d6214ad5b887998b5c929b4bcbc4a02a48ec68202ab85507f1e41  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== Manifest / app identity ==
+package: name='com.deviceprobe.inspector' versionCode='4' versionName='1.3.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+application-icon-160:'res/mipmap-mdpi-v4/ic_launcher.png'
+application-icon-240:'res/mipmap-hdpi-v4/ic_launcher.png'
+application-icon-320:'res/mipmap-xhdpi-v4/ic_launcher.png'
+application-icon-480:'res/mipmap-xxhdpi-v4/ic_launcher.png'
+application-icon-640:'res/mipmap-xxxhdpi-v4/ic_launcher.png'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== APK signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Package namespace check ==
+PASS: com.deviceprobe.inspector only

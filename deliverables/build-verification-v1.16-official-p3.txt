@@ -1,0 +1,25 @@
+[aapt badging]
+package: name='com.deviceprobe.inspector' versionCode='17' versionName='1.16.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'35'
+native-code: 'arm64-v8a' 'armeabi-v7a' 'x86' 'x86_64'
+[manifest color mode]
+        A: android:exported(0x01010010)=(type 0x12)0x0
+        A: android:configChanges(0x0101001f)=(type 0x11)0x480
+        A: android:colorMode(0x0101054a)=(type 0x10)0x1
+      E: activity (line=32)
+        A: android:name(0x01010003)="com.deviceprobe.inspector.MainActivity" (Raw: "com.deviceprobe.inspector.MainActivity")
+[official P3 asset integrity]
+c39618c20ad5dfca7596bc3fbe0e37c7cc3de5cf68b78b3bf088282f2e49ea30  app/src/main/res/raw/android_p3.png
+c39618c20ad5dfca7596bc3fbe0e37c7cc3de5cf68b78b3bf088282f2e49ea30  -
+[apksigner]
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+[native ABIs]
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+[APK SHA-256]
+33129034e96e4f1998a725e88fa14807cdabd6bc75aa351c1cbb948da700d0e3  deliverables/device-info-probe-v1.16.0-official-p3-debug.apk

@@ -1,0 +1,46 @@
+== APK SHA-256 ==
+94703e15a071f7c1ba5edcbce45f60f1716a08eb2ee18b1301f8e7963520ab72  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== APK identity ==
+package: name='com.deviceprobe.inspector' versionCode='11' versionName='1.10.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Hardware-detail source markers ==
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("性能硬件详情", "CPU、GPU 与内存的实际公开信息", buildPerformanceHardwareSummary(nativeResult, gpuResult), false, false);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("CPU 内核候选数据", "CPU 拓扑、调速器和频率；仅显示实际可读的 sysfs 节点", nativeSection(nativeResult, "[CPU 深度原始节点]", "[内核导出原文"), false, true);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String cpuRaw = nativeSection(nativeResult, "[CPU 深度原始节点]", "[内核导出原文");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "CPU 当前频率（候选）", cpuKHz(indexedCpuValue(cpuRaw, "scaling_cur_freq_khz")));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "GPU 厂商", gpuValue(gpuResult, "GL_VENDOR"));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "GPU 渲染器", gpuValue(gpuResult, "GL_RENDERER"));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "内核 MemAvailable", kernelMemValue(nativeResult, "MemAvailable"));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "内核 MemAvailable", kernelMemValue(nativeResult, "MemAvailable"));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        out.append("\n[性能硬件详情]\n").append(buildPerformanceHardwareSummary(nativeResult, gpuResult));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/GpuProbe.java:            context = EGL14.eglCreateContext(display, configs[0], EGL14.EGL_NO_CONTEXT, contextAttrs, 0);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/GpuProbe.java:            if (context == null || context == EGL14.EGL_NO_CONTEXT) return failure("eglCreateContext", EGL14.eglGetError());
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/GpuProbe.java:            append(out, "GL_VENDOR", GLES20.glGetString(GLES20.GL_VENDOR));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/GpuProbe.java:            append(out, "GL_RENDERER", GLES20.glGetString(GLES20.GL_RENDERER));
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "cpufreq/scaling_cur_freq", "cpufreq/scaling_min_freq", "cpufreq/scaling_max_freq",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "scaling_driver", "scaling_governor", "scaling_cur_freq_khz", "scaling_min_freq_khz",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    appendf(report, capacity, "\n[CPU 深度原始节点]\n");
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Legacy namespace ==
+PASS: no com.manus

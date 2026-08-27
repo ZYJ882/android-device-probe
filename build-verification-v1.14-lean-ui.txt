@@ -1,0 +1,50 @@
+== APK SHA-256 ==
+7bb1dfbdcb4b6dcfdc65d5ba7ac8cdeca4a080afffca545513bdd48a47682781  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== APK identity ==
+package: name='com.deviceprobe.inspector' versionCode='15' versionName='1.14.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Lean UI section markers ==
+        description.setText("核心参数、硬件能力与屏幕测试。\n" + deviceProfile.screenRule());
+            case "设备": title = "设备与系统"; break;
+            case "存储": title = "内存与存储"; break;
+            case "能力": title = "硬件能力"; break;
+        addExpandableSection("设备与系统", "型号、系统版本和设备类型", buildDeviceSummary(), true, false);
+        addExpandableSection("性能与芯片", "CPU、GPU、ABI 和 DDR 内存类型", buildPerformanceHardwareSummary(nativeResult, gpuResult), false, false);
+        addExpandableSection("内存与存储", "总内存、当前可用内存和可用空间", buildMemorySummary(nativeResult), false, false);
+        addExpandableSection("硬件能力", "传感器、相机、触控、定位和连接能力", CapabilityProbe.collect(this), false, false);
+        addExpandableSection("技术原始数据", "CPU、GPU、内存、屏幕、DDR 和电池的原始读取结果", buildTechnicalRaw(nativeResult, gpuResult), false, true);
+        append(out, "说明", "CPU 频率只显示系统实际公开结果；DDR 内存类型请在“内存与存储”中查看。完整驱动/原始数据请展开“技术原始数据”。");
+        append(out, "说明", "DDR 和内存厂商只显示设备公开结果，不依据机型推测。完整内核字段见“技术原始数据”。");
+        append(out, "说明", "健康状态不等于电池健康百分比；更详细电量计字段见“技术原始数据”。");
+        out.append("[设备与系统]\n").append(buildDeviceSummary());
+        out.append("\n[性能与芯片]\n").append(buildPerformanceHardwareSummary(nativeResult, gpuResult));
+        out.append("\n[内存与存储]\n").append(buildMemorySummary(nativeResult));
+        out.append("\n[硬件能力]\n").append(CapabilityProbe.collect(this));
+        out.append("\n[技术原始数据]\n").append(buildTechnicalRaw(nativeResult, gpuResult));
+
+== Removed primary UI elements ==
+PASS: no navigation/status/copy in primary layout
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Legacy namespace ==
+PASS: no com.manus

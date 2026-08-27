@@ -1,0 +1,52 @@
+== APK SHA-256 ==
+833f8b042cebe0a7e6e1efcc317fd264e733c67a275b01ebb84d832973d11edc  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== Manifest / app identity ==
+package: name='com.deviceprobe.inspector' versionCode='5' versionName='1.4.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== APK signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Current deep-probe source markers ==
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("屏幕深度信息", "逻辑显示状态、刷新率、模式与硬件公开边界", buildDisplayDeepSection(nativeResult), false, false);
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("内存深度信息", "Android 系统口径与 /proc/meminfo 内核口径并列", buildMemoryStorageSection(nativeResult), false, false);
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("电池深度信息", "BatteryManager 与 power_supply 原始节点并列", buildBatteryDeepSection(nativeResult), false, false);
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("屏幕内核候选数据", "仅尝试公开可读节点；不以机型数据库猜测面板", nativeSection(nativeResult, "[显示内核候选节点]", "[电池 power_supply 原始节点]"), false, true);
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("电池 power_supply 原文", "来自内核驱动/fuel-gauge；字段、路径与错误均原样保留", nativeSection(nativeResult, "[电池 power_supply 原始节点]", "[数据边界]"), false, true);
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "候选内核节点", nativeSectionHasReadableData(nativeResult, "[显示内核候选节点]") ? "存在可读或错误原文，见“屏幕内核候选数据”" : "未发现");
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "内核来源", "/sys/class/power_supply/*；实际节点和错误见“电池 power_supply 原文”");
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String section = nativeSection(nativeResult, "[电池 power_supply 原始节点]", "[数据边界]");
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        return raw == null ? "设备未公开或当前应用不可读" : raw + "（power_supply 原始值）";
+app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String section = nativeSection(nativeResult, "[电池 power_supply 原始节点]", "[数据边界]");
+app/src/main/cpp/ProbeNative.c:static void append_power_supply_entry(char *report, size_t capacity, const char *entry_name) {
+app/src/main/cpp/ProbeNative.c:    snprintf(type_path, sizeof(type_path), "/sys/class/power_supply/%s/type", entry_name);
+app/src/main/cpp/ProbeNative.c:    appendf(report, capacity, "\n-- /sys/class/power_supply/%s（type=Battery） --\n", entry_name);
+app/src/main/cpp/ProbeNative.c:        snprintf(path, sizeof(path), "/sys/class/power_supply/%s/%s", entry_name, fields[index]);
+app/src/main/cpp/ProbeNative.c:static void append_power_supply_report(char *report, size_t capacity) {
+app/src/main/cpp/ProbeNative.c:    DIR *directory = opendir("/sys/class/power_supply");
+app/src/main/cpp/ProbeNative.c:        appendf(report, capacity, "目录不可读: /sys/class/power_supply: %s\n", strerror(errno));
+app/src/main/cpp/ProbeNative.c:        snprintf(type_path, sizeof(type_path), "/sys/class/power_supply/%s/type", entry->d_name);
+app/src/main/cpp/ProbeNative.c:            append_power_supply_entry(report, capacity, entry->d_name);
+app/src/main/cpp/ProbeNative.c:    appendf(report, sizeof(report), "\n[显示内核候选节点]\n");
+app/src/main/cpp/ProbeNative.c:    appendf(report, sizeof(report), "\n[电池 power_supply 原始节点]\n");
+app/src/main/cpp/ProbeNative.c:    append_power_supply_report(report, sizeof(report));
+
+== Namespace check ==
+PASS: com.deviceprobe.inspector only

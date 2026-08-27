@@ -1,0 +1,43 @@
+== APK SHA-256 ==
+f8df1ef3b8b459af0eaefdc9bb592834b665ab2c0597a3a92cc5b211187a5632  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== Manifest ==
+package: name='com.deviceprobe.inspector' versionCode='6' versionName='1.5.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Vendor implementation markers ==
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        addExpandableSection("硬件厂商", "内存硬件、电池和电量计的实际公开信息", buildHardwareVendorSummary(nativeResult), false, false);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String memorySection = nativeSection(nativeResult, "[内存硬件厂商候选]", "[电池 power_supply 原始节点]");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String memoryDevice = firstLineValue(memorySection, "/phys_device:");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String manufacturer = keyValue(batterySection, "manufacturer");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        String modelName = keyValue(batterySection, "model_name");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        append(out, "电池厂商", manufacturer == null ? "设备未公开或当前应用不可读" : manufacturer + "（power_supply 原始值）");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        out.append("\n[硬件厂商]\n").append(buildHardwareVendorSummary(nativeResult));
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            "technology", "manufacturer", "model_name", "model", "voltage_now", "voltage_max", "current_now", "current_avg",
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    appendf(report, capacity, "\n[内存硬件厂商候选]\n");
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    appendf(report, capacity, "标准 sysfs 主要描述内存块状态；phys_device 是否包含颗粒厂商由内核/厂商实现决定。\n");
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:        snprintf(path, sizeof(path), "/sys/devices/system/memory/memory%d/phys_device", index);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:            appendf(report, capacity, "memory%d/phys_device: %s\n", index, value);
+/home/ubuntu/android-device-probe/app/src/main/cpp/ProbeNative.c:    if (!found) appendf(report, capacity, "未发现可读的 memory0..memory7/phys_device 节点。\n");
+
+== Namespace ==
+PASS

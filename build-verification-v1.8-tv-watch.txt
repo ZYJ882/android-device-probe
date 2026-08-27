@@ -1,0 +1,96 @@
+== APK SHA-256 ==
+a3a8884acf0b5110da2b2c258a2bc392292a7f96294c13d76982fbf900eb6a45  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== APK identity ==
+package: name='com.deviceprobe.inspector' versionCode='9' versionName='1.8.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Device feature and launcher manifest entries ==
+    E: uses-feature (line=11)
+      A: android:name(0x01010003)="android.software.leanback" (Raw: "android.software.leanback")
+      A: android:required(0x0101028e)=(type 0x12)0x0
+    E: uses-feature (line=14)
+      A: android:name(0x01010003)="android.hardware.type.watch" (Raw: "android.hardware.type.watch")
+      A: android:required(0x0101028e)=(type 0x12)0x0
+    E: application (line=18)
+      A: android:theme(0x01010000)=@0x7f030000
+--
+      E: activity (line=27)
+        A: android:name(0x01010003)="com.deviceprobe.inspector.ScreenTestActivity" (Raw: "com.deviceprobe.inspector.ScreenTestActivity")
+        A: android:exported(0x01010010)=(type 0x12)0x0
+        A: android:configChanges(0x0101001f)=(type 0x11)0x480
+      E: activity (line=31)
+--
+          E: category (line=43)
+            A: android:name(0x01010003)="android.intent.category.LEANBACK_LAUNCHER" (Raw: "android.intent.category.LEANBACK_LAUNCHER")
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Adaptation implementation markers ==
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        if (pm.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        } else if (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:                || pm.hasSystemFeature(PackageManager.FEATURE_TELEVISION)) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:    boolean isWatch() { return kind == Kind.WATCH; }
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:    boolean isTelevision() { return kind == Kind.TELEVISION; }
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:    String screenRule() {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        if (isWatch()) return "手表规则：单列、紧凑边距、大触控目标；屏幕测试使用点按左右半屏控制。";
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/DeviceProfile.java:        if (isTelevision()) return "电视规则：大屏焦点、横向布局与遥控器方向键/确认键控制。";
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            if (profile.isWatch()) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        int inset = profile.isWatch() ? dp(7) : (profile.isTelevision() ? dp(22) : dp(14));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        top.setPadding(inset, profile.isWatch() ? dp(5) : dp(8), inset, profile.isWatch() ? dp(5) : dp(8));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        titleView = textView("", profile.isWatch() ? 12 : (profile.isTelevision() ? 20 : 16), WHITE, true);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        hintView = textView("", profile.isWatch() ? 10 : (profile.isTelevision() ? 15 : 12), MUTED, false);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        hintView.setMaxLines(profile.isWatch() ? 2 : 3);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        int inset = profile.isWatch() ? dp(5) : (profile.isTelevision() ? dp(22) : dp(10));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        bottom.setPadding(inset, profile.isWatch() ? dp(4) : dp(7), inset, profile.isWatch() ? dp(4) : dp(7));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        TextView previous = action(profile.isWatch() ? "←" : "上一个");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        TextView next = action(profile.isWatch() ? "→" : "下一个");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        int height = profile.isWatch() ? dp(34) : (profile.isTelevision() ? dp(56) : dp(44));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        addGap(bottom, profile.isWatch() ? dp(5) : dp(10));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        if (!profile.isWatch()) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        TextView button = textView(value, profile.isWatch() ? 14 : (profile.isTelevision() ? 17 : 14), WHITE, true);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        button.setFocusableInTouchMode(profile.isTelevision());
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        bg.setCornerRadius(dp(profile.isWatch() ? 10 : 13));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        String controller = profile.isTelevision() ? " · 遥控器：←/→ 切换，确认切换纯色"
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:                : (profile.isWatch() ? " · 长按画面退出" : "");
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        if (profile.isTelevision()) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) && patternIndex == 0) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        private int top() { return profile.isWatch() ? dp(55) : (profile.isTelevision() ? dp(84) : dp(78)); }
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:        private int bottom() { return getHeight() - (profile.isWatch() ? dp(48) : (profile.isTelevision() ? dp(72) : dp(62))); }
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            text(profile.isWatch() ? 9 : 15, solidIndex == 1 ? Color.BLACK : Color.WHITE);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            int steps = profile.isWatch() ? 8 : 16;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            int bands = profile.isWatch() ? 6 : 12;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            int columns = profile.isWatch() ? 6 : 10;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            int rows = profile.isWatch() ? 6 : 12;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            paint.setStrokeWidth(dp(profile.isWatch() ? 3 : 4));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            int rings = profile.isWatch() ? 4 : 7;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            text(profile.isWatch() ? 9 : 15, light ? Color.BLACK : Color.WHITE);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:                text(profile.isWatch() ? 8 : 13, i == 6 || i == 5 ? Color.BLACK : Color.WHITE);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            int strips = profile.isWatch() ? 5 : 10;
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/ScreenTestActivity.java:            text(profile.isWatch() ? 9 : 16, page == 1 || page == 3 || page == 5 || page == 7 ? Color.BLACK : Color.WHITE);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        int horizontalInset = deviceProfile.isWatch() ? dp(10) : (deviceProfile.isTelevision() ? dp(38) : dp(20));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        int verticalInset = deviceProfile.isWatch() ? dp(10) : dp(22);
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        root.setPadding(horizontalInset, verticalInset, horizontalInset, deviceProfile.isWatch() ? dp(12) : dp(28));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        root.addView(createHeroCard(), marginParams(match(), wrap(), 0, deviceProfile.isWatch() ? dp(10) : dp(20), 0, 0));
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        description.setText("自动识别手机、平板、电视与手表。\n" + deviceProfile.screenRule());
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        if (deviceProfile.isWatch()) {
+/home/ubuntu/android-device-probe/app/src/main/java/com/deviceprobe/inspector/MainActivity.java:        button.setFocusableInTouchMode(deviceProfile.isTelevision());
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so

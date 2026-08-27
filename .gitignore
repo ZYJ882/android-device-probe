@@ -1,0 +1,21 @@
+# Local Android / Gradle configuration and build output
+.gradle/
+local.properties
+.idea/
+*.iml
+**/build/
+**/.cxx/
+
+# Historical local distribution folders
+/dist/
+
+# Keep only the verified current install package and its verification record.
+*.apk
+deliverables/*.txt
+!deliverables/device-info-probe-v1.16.0-official-p3-debug.apk
+!deliverables/build-verification-v1.16-official-p3.txt
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.swp

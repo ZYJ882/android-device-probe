@@ -1,0 +1,46 @@
+== APK SHA-256 ==
+bce30ff2f5bc8be0e4868dd8f89ca58d104b68c5482c3347fa921b4473a1ede0  /home/ubuntu/android-device-probe/app/build/outputs/apk/debug/app-debug.apk
+
+== Manifest ==
+package: name='com.deviceprobe.inspector' versionCode='6' versionName='1.5.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'28'
+launchable-activity: name='com.deviceprobe.inspector.MainActivity'  label='' icon=''
+
+== Signature ==
+Verifies
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Verified using v3 scheme (APK Signature Scheme v3): false
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+WARNING: META-INF/com/android/build/gradle/app-metadata.properties not protected by signature. Unauthorized modifications to this JAR entry will not be detected. Delete or move the entry outside of META-INF/.
+
+== Native library ABIs ==
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+== Simplified UI markers ==
+        addExpandableSection("设备与系统", "这是什么设备、运行什么系统", buildDeviceSummary(), true, false);
+        addExpandableSection("系统兼容性", "这个设备适合安装哪种应用与原生库", buildAbiSummary(nativeResult), true, false);
+        addExpandableSection("屏幕", "分辨率、清晰度、刷新率和屏幕状态", buildDisplaySummary(), false, false);
+        addExpandableSection("内存与存储", "还剩多少内存和空间", buildMemorySummary(), false, false);
+        addExpandableSection("电池", "电量、充电状态、温度和健康状态", buildBatterySummary(), false, false);
+    private String buildDeviceSummary() {
+    private String buildAbiSummary(String nativeResult) {
+    private String buildDisplaySummary() {
+    private String buildMemorySummary() {
+    private String buildBatterySummary() {
+        out.append("[设备与系统]\n").append(buildDeviceSummary());
+        out.append("\n[系统兼容性]\n").append(buildAbiSummary(nativeResult));
+        out.append("\n[屏幕]\n").append(buildDisplaySummary());
+        out.append("\n[内存与存储]\n").append(buildMemorySummary());
+        out.append("\n[电池]\n").append(buildBatterySummary());
+        cpuValue.setText(Runtime.getRuntime().availableProcessors() + " 个逻辑核心");
+
+== Namespace ==
+PASS
