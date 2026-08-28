@@ -1150,7 +1150,58 @@ public final class MainActivity extends android.app.Activity {
 
     private void showCameraDialog() {
         String camera = extractTextSection(latestCapabilityResult, "[摄像头公开枚举]", "[传感器清单]");
-        showLongTextDialog("Camera2 公开信息", TextUtils.isEmpty(camera) ? "尚未完成采集，请等待刷新结束后重试。" : camera);
+        if (TextUtils.isEmpty(camera)) {
+            showLongTextDialog("Camera2 公开信息", "尚未完成采集，请等待刷新结束后重试。");
+            return;
+        }
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(dp(14), dp(10), dp(14), dp(14));
+        String[] cameras = camera.split("(?=cameraId )");
+        for (String block : cameras) {
+            if (!TextUtils.isEmpty(block.trim())) addCameraDetailCard(list, block.trim());
+        }
+        scroll.addView(list);
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Camera2 详细参数")
+                .setView(scroll)
+                .setPositiveButton("关闭", null)
+                .show();
+    }
+
+    private void addCameraDetailCard(LinearLayout list, String block) {
+        String[] lines = block.split("\\n");
+        String cameraTitle = lines.length == 0 ? "摄像头" : lines[0].trim();
+        StringBuilder basic = new StringBuilder();
+        List<String> sectionTitles = new ArrayList<>();
+        List<StringBuilder> sectionBodies = new ArrayList<>();
+        StringBuilder current = basic;
+        for (String line : lines) {
+            String trimmed = line.trim();
+            if (trimmed.startsWith("【") && trimmed.endsWith("】")) {
+                String sectionTitle = trimmed.substring(1, trimmed.length() - 1);
+                sectionTitles.add(sectionTitle);
+                current = new StringBuilder();
+                sectionBodies.add(current);
+            } else if (!trimmed.isEmpty()) {
+                current.append(trimmed).append('\n');
+            }
+        }
+        addCameraLayer(list, "基本信息 · " + cameraTitle, basic.toString());
+        for (int index = 0; index < sectionTitles.size(); index++) {
+            addCameraLayer(list, sectionTitles.get(index), sectionBodies.get(index).toString());
+        }
+    }
+
+    private void addCameraLayer(LinearLayout list, String title, String body) {
+        LinearLayout panel = card();
+        panel.setPadding(dp(13), dp(12), dp(13), dp(12));
+        panel.setBackground(roundedDrawable(SURFACE, dp(14)));
+        TextView heading = label(title, TEXT_PRIMARY, 14);
+        panel.addView(heading, marginParams(match(), wrap(), 0, 0, 0, dp(7)));
+        addKeyValueGrid(panel, body);
+        list.addView(panel, marginParams(match(), wrap(), 0, 0, 0, dp(10)));
     }
 
     private void showSensorDialog() {

@@ -26,7 +26,7 @@
 | 内存与存储 | 总内存、可用内存、使用比例、存储总量/可用量、DDR 公开字段与内存硬件名称候选 | `ActivityManager`、`StatFs`、`/proc/meminfo`、公开 `/sys` |
 | 电池 | 电量、状态、健康枚举、温度、电压、外接电源、公开的厂商/型号与条件式健康度估算 | `ACTION_BATTERY_CHANGED`、`BatteryManager`、`/sys/class/power_supply` |
 | 屏幕 | 分辨率、密度、尺寸估算、刷新率、系统广色域/HDR 报告、10-bit 公开边界 | `Display`、`DisplayManager`、公开显示节点 |
-| 硬件能力 | 摄像头存在声明、Camera2 前/后/外置方向、最大 JPEG 分辨率、FPS、AF、RAW、逻辑多摄像头公开能力、传感器与连接能力 | `PackageManager`、Camera2、`SensorManager` |
+| 硬件能力 | 摄像头存在声明、Camera2 前/后/外置方向、四层摄像头详情、照片/视频尺寸、MP、焦距、光圈、对焦、ISO、曝光、OIS/EIS、RAW、HDR、逻辑/物理摄像头与传感器能力 | `PackageManager`、Camera2、`SensorManager` |
 | 屏幕测试 | 14 项纯色、灰阶、对比度、饱和度、触控、几何、渐变、闪烁辅助、拖影、残影、色域、视角等测试，含官方 Display P3 红色机器人图 | Android Canvas、MotionEvent、官方 P3 PNG |
 
 ## 界面与操作
@@ -54,7 +54,11 @@
 
 ## 相机信息的判定方式
 
-`FEATURE_CAMERA_ANY` 仅代表系统声明存在任意摄像头，**不能**当作“后置摄像头”。应用会使用 Camera2 的 `CameraCharacteristics.LENS_FACING` 实际枚举前置、后置、外置与方向未知的 Camera ID，并在系统公开时显示最大 JPEG 输出分辨率、目标 FPS 范围、自动对焦、RAW 与 API 28+ 逻辑多摄像头能力。
+`FEATURE_CAMERA_ANY` 仅代表系统声明存在任意摄像头，**不能**当作“后置摄像头”。应用会使用 Camera2 的 `CameraCharacteristics.LENS_FACING` 实际枚举前置、后置、外置与方向未知的 Camera ID。点击“相机”快速入口后，每个 Camera ID 会以四层卡片显示：基本信息、光学参数、拍摄能力和 Camera2 硬件能力。
+
+详细字段包括最大照片分辨率、按宽 × 高计算的有效像素 MP 与宽高比、主要照片尺寸、焦段推断、真实光学焦距、传感器物理尺寸、由传感器尺寸计算的 35mm 等效焦距、光圈、最小对焦距离、AF/CAF/Fixed Focus、OIS/EIS、最大视频输出尺寸、Camera2 目标 FPS 范围、ISO、曝光时间、RAW/DNG、闪光灯、HDR 场景能力、人脸检测、AE/AWB、`LIMITED/FULL/LEVEL_3/LEGACY` 硬件级别、Manual Sensor/Exposure/Focus、Burst Capture、Logical Camera 与 Physical Camera ID。每个字段都明确区分 Camera2 原始值、计算值、推断值或未公开值；“夜景”不作为通用硬件参数猜测。
+
+其中“有效像素”明确按 Camera2 最大 JPEG 输出尺寸计算，例如 `8000 × 6000 = 48,000,000 ≈ 48.0 MP`；它表示系统可输出的最大照片分辨率，不等同于厂商宣传的传感器理论像素。真实光学焦距与 35mm 等效焦距分开显示，等效焦距带有“计算值”说明。
 
 上述采集不打开相机、不预览、不拍照，也不请求 `CAMERA` 权限。相机模组供应商、镜头传感器型号等未被系统公开的字段不会被机型数据库补全。[3]
 
