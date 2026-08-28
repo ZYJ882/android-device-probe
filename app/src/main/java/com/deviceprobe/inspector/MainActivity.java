@@ -86,6 +86,12 @@ public final class MainActivity extends android.app.Activity {
     private String latestGpuResult = "";
     private String latestVulkanResult = "";
     private String latestCapabilityResult = "";
+    private String latestDeviceSummary = "";
+    private String latestPerformanceSummary = "";
+    private String latestGraphicsSummary = "";
+    private String latestMemorySummary = "";
+    private String latestBatterySummary = "";
+    private String latestDisplaySummary = "";
     private static final int EXPORT_TEXT = 1;
     private static final int EXPORT_JSON = 2;
 
@@ -409,9 +415,9 @@ public final class MainActivity extends android.app.Activity {
                 "图形 API", "OpenGL / Vulkan", v -> navigateToSection("图形 API"));
         addQuickActionRow(grid,
                 "电池", "状态与健康度", v -> navigateToSection("电池"),
-                "传感器", "系统枚举列表", v -> navigateToSection("硬件能力"));
+                "传感器", "系统枚举列表", v -> showSensorDialog());
         addQuickActionRow(grid,
-                "相机", "Camera2 元数据", v -> navigateToSection("硬件能力"),
+                "相机", "Camera2 元数据", v -> showCameraDialog(),
                 "硬件能力", "连接与触控", v -> navigateToSection("硬件能力"));
         return grid;
     }
@@ -564,6 +570,12 @@ public final class MainActivity extends android.app.Activity {
             raw.setPadding(dp(4), dp(4), dp(4), dp(4));
             content.addView(raw, matchParams());
         } else {
+            if ("电池".equals(titleText)) {
+                content.addView(createUsageBar("当前电量", firstLineValue(bodyText, "当前电量:")), marginParams(match(), wrap(), 0, 0, 0, dp(10)));
+            } else if ("内存与存储".equals(titleText)) {
+                content.addView(createUsageBar("内存使用", firstLineValue(bodyText, "内存使用:")), marginParams(match(), wrap(), 0, 0, 0, dp(8)));
+                content.addView(createUsageBar("存储使用", firstLineValue(bodyText, "存储使用:")), marginParams(match(), wrap(), 0, 0, 0, dp(10)));
+            }
             addKeyValueGrid(content, bodyText);
             if ("硬件能力".equals(titleText)) {
                 TextView detailAction = actionButton("查看完整 Camera2 / 传感器清单  ›", false);
@@ -607,6 +619,41 @@ public final class MainActivity extends android.app.Activity {
                 row.addView(keyValueTile(second[0], second[1]), new LinearLayout.LayoutParams(0, wrap(), 1f));
             }
         }
+    }
+
+    private View createUsageBar(String label, String value) {
+        LinearLayout holder = new LinearLayout(this);
+        holder.setOrientation(LinearLayout.VERTICAL);
+        TextView caption = new TextView(this);
+        caption.setText(label + "  " + (value == null ? "不可读取" : value));
+        caption.setTextColor(TEXT_SECONDARY);
+        caption.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        holder.addView(caption);
+        LinearLayout track = new LinearLayout(this);
+        track.setOrientation(LinearLayout.HORIZONTAL);
+        track.setBackground(roundedDrawable(Color.rgb(31, 47, 70), dp(5)));
+        track.setPadding(0, 0, 0, 0);
+        Long parsedPercent = leadingLong(value);
+        int percent = progressPercent(value);
+        View fill = new View(this);
+        fill.setBackground(roundedDrawable(progressColor(percent), dp(5)));
+        View remaining = new View(this);
+        track.addView(fill, new LinearLayout.LayoutParams(0, dp(7), parsedPercent == null ? 0 : Math.max(1, percent)));
+        track.addView(remaining, new LinearLayout.LayoutParams(0, dp(7), parsedPercent == null ? 1 : Math.max(1, 100 - percent)));
+        holder.addView(track, marginParams(match(), dp(7), 0, dp(6), 0, 0));
+        return holder;
+    }
+
+    private static int progressPercent(String value) {
+        Long number = leadingLong(value);
+        if (number == null) return 0;
+        return (int) Math.max(0, Math.min(100, number));
+    }
+
+    private static int progressColor(int percent) {
+        if (percent >= 95) return Color.rgb(214, 101, 101);
+        if (percent >= 85) return Color.rgb(205, 164, 82);
+        return MINT;
     }
 
     private List<String[]> parseKeyValueLines(String text) {
@@ -657,6 +704,9 @@ public final class MainActivity extends android.app.Activity {
         main.setPadding(0, dp(4), 0, 0);
         tile.addView(main);
         TextView badge = sourceBadge(key, value);
+        badge.setClickable(true);
+        badge.setFocusable(true);
+        badge.setOnClickListener(v -> showDataSourceDialog(key, value));
         tile.addView(badge, marginParams(wrap(), wrap(), 0, dp(7), 0, 0));
         return tile;
     }
@@ -665,6 +715,30 @@ public final class MainActivity extends android.app.Activity {
         return key.contains("总内存") || key.contains("可用内存") || key.contains("存储总量")
                 || key.contains("可用空间") || key.contains("当前电量") || key.equals("GPU")
                 || key.contains("屏幕分辨率") || key.contains("逻辑核心");
+    }
+
+    private void showDataSourceDialog(String key, String value) {
+        String source = sourceFor(key, value, "Android Framework");
+        String confidence = isUnknownValue(value) ? "unknown" : confidenceFor(key, value, "reported");
+        String detail;
+        if (source.contains("OpenGL")) {
+            detail = "实际离屏 EGL/OpenGL ES 上下文：GL_VENDOR、GL_RENDERER、GL_VERSION 或 GLSL 查询结果。";
+        } else if (source.contains("Vulkan")) {
+            detail = "Android framework Vulkan feature 与 C/NDK 动态 libvulkan.so loader 枚举结果分开采集。";
+        } else if (source.contains("Battery")) {
+            detail = "电量、状态、温度与电压来自 ACTION_BATTERY_CHANGED / BatteryManager；厂商、型号与电量计字段仅在 /sys/class/power_supply 对普通应用公开时显示。";
+        } else if (source.contains("Camera2")) {
+            detail = "来自 Camera2 CameraCharacteristics 公开 metadata；应用不打开相机，也不申请 CAMERA 权限。";
+        } else if (source.contains("/proc")) {
+            detail = "来自 C/NDK 读取的普通应用可访问 /proc 或 /sys 节点；具体原文与读取失败原因位于“技术原始数据”。";
+        } else if (source.contains("Display")) {
+            detail = "来自 Android Display / DisplayManager 公开 API；广色域与 HDR 是系统报告能力，不等同于面板物理参数。";
+        } else {
+            detail = "来自 Android framework 的当前公开信息；不会根据机型数据库补全未知字段。";
+        }
+        showLongTextDialog("数据来源 · " + key,
+                "当前值：\n" + safe(value) + "\n\n来源：\n" + source
+                        + "\n\n可信度：\n" + confidence + "\n\n说明：\n" + detail);
     }
 
     private TextView sourceBadge(String key, String value) {
@@ -786,10 +860,12 @@ public final class MainActivity extends android.app.Activity {
                 String performanceSummary = buildPerformanceHardwareSummary(nativeResult, gpuResult);
                 String graphicsSummary = buildGraphicsApiSummary(gpuResult, vulkanResult);
                 String memorySummary = buildMemorySummary(nativeResult);
-                String batterySummary = buildBatterySummary(nativeResult);
+                Intent batterySnapshot = batteryIntent();
+                String batterySummary = buildBatterySummary(nativeResult, batterySnapshot);
                 String displaySummary = buildDisplaySummary();
                 String technicalRaw = buildTechnicalRaw(nativeResult, gpuResult, vulkanResult);
-                String copyReport = buildCopyReport(nativeResult, gpuResult, vulkanResult, capabilityResult);
+                String copyReport = buildCopyReport(deviceSummary, performanceSummary, graphicsSummary, memorySummary,
+                        batterySummary, displaySummary, capabilityResult, technicalRaw);
                 ProbeSnapshot snapshot = new ProbeSnapshot(nativeResult, gpuResult, vulkanResult, capabilityResult,
                         deviceSummary, performanceSummary, graphicsSummary, memorySummary, batterySummary,
                         displaySummary, technicalRaw, copyReport);
@@ -805,6 +881,12 @@ public final class MainActivity extends android.app.Activity {
         latestGpuResult = snapshot.gpuResult;
         latestVulkanResult = snapshot.vulkanResult;
         latestCapabilityResult = snapshot.capabilityResult;
+        latestDeviceSummary = snapshot.deviceSummary;
+        latestPerformanceSummary = snapshot.performanceSummary;
+        latestGraphicsSummary = snapshot.graphicsSummary;
+        latestMemorySummary = snapshot.memorySummary;
+        latestBatterySummary = snapshot.batterySummary;
+        latestDisplaySummary = snapshot.displaySummary;
         fullReport = snapshot.copyReport;
         updateOverview(snapshot);
         renderSections(snapshot);
@@ -942,14 +1024,18 @@ public final class MainActivity extends android.app.Activity {
             root.put("schema_version", 1);
             root.put("app_version", BuildConfig.VERSION_NAME);
             root.put("generated_at", now());
-            root.put("device", sectionJson(buildDeviceSummary(), "Android Framework", "reported"));
-            root.put("cpu", sectionJson(buildPerformanceHardwareSummary(latestNativeResult, latestGpuResult), "/proc and /sys", "reported"));
-            root.put("gpu", sectionJson(latestGpuResult, "OpenGL ES Driver", "driver_reported"));
+            root.put("device", sectionJson(latestDeviceSummary, "Android Framework", "reported"));
+            root.put("system", sectionJson(filterKeyValueLines(latestDeviceSummary, "系统", "安全补丁", "设备类型"), "Android Framework", "reported"));
+            root.put("cpu", sectionJson(filterKeyValueLines(latestPerformanceSummary, "CPU", "逻辑核心", "ABI"), "/proc and /sys", "reported"));
+            root.put("gpu", sectionJson(latestGraphicsSummary, "OpenGL ES Driver", "driver_reported"));
             root.put("vulkan", sectionJson(latestVulkanResult, "Vulkan Driver / Android Framework", "driver_reported"));
-            root.put("display", sectionJson(buildDisplaySummary(), "Android Display API", "reported"));
-            root.put("memory", sectionJson(buildMemorySummary(latestNativeResult), "Android Framework and Linux public nodes", "reported"));
-            root.put("battery", sectionJson(buildBatterySummary(latestNativeResult), "Battery broadcast and power_supply", "reported"));
-            root.put("hardware", sectionJson(latestCapabilityResult, "PackageManager, Camera2 and SensorManager", "reported"));
+            root.put("display", sectionJson(latestDisplaySummary, "Android Display API", "reported"));
+            root.put("memory", sectionJson(filterKeyValueLines(latestMemorySummary, "内存", "DDR", "当前状态"), "Android Framework and Linux public nodes", "reported"));
+            root.put("storage", sectionJson(filterKeyValueLines(latestMemorySummary, "存储", "可用空间"), "StatFs data partition", "reported"));
+            root.put("battery", sectionJson(latestBatterySummary, "Battery broadcast and power_supply", "reported"));
+            root.put("camera", sectionJson(extractTextSection(latestCapabilityResult, "[摄像头公开枚举]", "[传感器清单]"), "Camera2", "reported"));
+            root.put("sensors", sectionJson(extractTextSection(latestCapabilityResult, "[传感器清单]", "真实性说明:"), "SensorManager", "reported"));
+            root.put("hardware", sectionJson(buildHardwareOverview(latestCapabilityResult), "PackageManager, Camera2 and SensorManager", "reported"));
             JSONObject raw = new JSONObject();
             raw.put("ndk_kernel", latestNativeResult);
             raw.put("opengl_es", latestGpuResult);
@@ -960,6 +1046,35 @@ public final class MainActivity extends android.app.Activity {
         } catch (JSONException error) {
             return "{\"error\":\"JSON export failed\"}";
         }
+    }
+
+    private static String filterKeyValueLines(String text, String... keyStarts) {
+        if (TextUtils.isEmpty(text)) return "";
+        StringBuilder out = new StringBuilder();
+        for (String line : text.split("\\n")) {
+            String trimmed = line.trim();
+            int split = trimmed.indexOf(": ");
+            if (split <= 0) split = trimmed.indexOf('：');
+            if (split <= 0) continue;
+            String key = trimmed.substring(0, split).trim();
+            for (String keyStart : keyStarts) {
+                if (key.startsWith(keyStart)) {
+                    out.append(trimmed).append('\n');
+                    break;
+                }
+            }
+        }
+        return out.toString();
+    }
+
+    private static String extractTextSection(String text, String startMarker, String endMarker) {
+        if (TextUtils.isEmpty(text)) return "";
+        int start = text.indexOf(startMarker);
+        if (start < 0) return "";
+        int startLine = text.indexOf('\n', start);
+        if (startLine < 0) return "";
+        int end = text.indexOf(endMarker, startLine + 1);
+        return text.substring(startLine + 1, end >= 0 ? end : text.length()).trim();
     }
 
     private JSONObject sectionJson(String text, String defaultSource, String defaultConfidence) throws JSONException {
@@ -1031,6 +1146,16 @@ public final class MainActivity extends android.app.Activity {
         append(out, "传感器", sensorCount == null ? "系统未公开或不可读" : sensorCount + "（点击下方查看完整清单）");
         append(out, "数据来源", "PackageManager、Camera2、SensorManager；完整逐项信息可展开查看");
         return out.toString();
+    }
+
+    private void showCameraDialog() {
+        String camera = extractTextSection(latestCapabilityResult, "[摄像头公开枚举]", "[传感器清单]");
+        showLongTextDialog("Camera2 公开信息", TextUtils.isEmpty(camera) ? "尚未完成采集，请等待刷新结束后重试。" : camera);
+    }
+
+    private void showSensorDialog() {
+        String sensors = extractTextSection(latestCapabilityResult, "[传感器清单]", "真实性说明:");
+        showLongTextDialog("传感器公开清单", TextUtils.isEmpty(sensors) ? "尚未完成采集，请等待刷新结束后重试。" : sensors);
     }
 
     private void showLongTextDialog(String title, String text) {
@@ -1229,8 +1354,11 @@ public final class MainActivity extends android.app.Activity {
         if (memoryDevice != null) append(out, "内存硬件名称（候选）", memoryDevice);
         try {
             StatFs fs = new StatFs(Environment.getDataDirectory().getAbsolutePath());
-            append(out, "存储总量", bytes(fs.getTotalBytes()));
-            append(out, "可用空间", bytes(fs.getAvailableBytes()));
+            long storageTotal = fs.getTotalBytes();
+            long storageAvailable = fs.getAvailableBytes();
+            append(out, "存储总量", bytes(storageTotal));
+            append(out, "可用空间", bytes(storageAvailable));
+            append(out, "存储使用", percent(storageTotal - storageAvailable, storageTotal) + "%（StatFs 数据分区口径）");
         } catch (Throwable error) {
             append(out, "存储空间", "不可读取");
         }
@@ -1238,15 +1366,14 @@ public final class MainActivity extends android.app.Activity {
         return out.toString();
     }
 
-    private String buildBatterySummary(String nativeResult) {
+    private String buildBatterySummary(String nativeResult, Intent intent) {
         StringBuilder out = new StringBuilder();
-        Intent intent = batteryIntent();
         if (intent == null) {
             append(out, "电池信息", "不可读取");
             return out.toString();
         }
-        append(out, "当前电量", currentBattery());
-        append(out, "当前状态", currentBatteryStatus());
+        append(out, "当前电量", batteryPercent(intent));
+        append(out, "当前状态", batteryStatus(intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)));
         int temperature = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Integer.MIN_VALUE);
         append(out, "温度", temperature != Integer.MIN_VALUE ? String.format(Locale.US, "%.1f °C", temperature / 10.0) : "不可读取");
         int voltage = intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, -1);
@@ -1293,16 +1420,18 @@ public final class MainActivity extends android.app.Activity {
         return TextUtils.isEmpty(value) ? "不可读取" : value;
     }
 
-    private String buildCopyReport(String nativeResult, String gpuResult, String vulkanResult, String capabilityResult) {
+    private String buildCopyReport(String deviceSummary, String performanceSummary, String graphicsSummary,
+                                   String memorySummary, String batterySummary, String displaySummary,
+                                   String capabilityResult, String technicalRaw) {
         StringBuilder out = new StringBuilder();
-        out.append("[设备与系统]\n").append(buildDeviceSummary());
-        out.append("\n[性能与芯片]\n").append(buildPerformanceHardwareSummary(nativeResult, gpuResult));
-        out.append("\n[图形 API]\n").append(buildGraphicsApiSummary(gpuResult, vulkanResult));
-        out.append("\n[内存与存储]\n").append(buildMemorySummary(nativeResult));
-        out.append("\n[电池]\n").append(buildBatterySummary(nativeResult));
-        out.append("\n[屏幕]\n").append(buildDisplaySummary());
+        out.append("[设备与系统]\n").append(deviceSummary);
+        out.append("\n[性能与芯片]\n").append(performanceSummary);
+        out.append("\n[图形 API]\n").append(graphicsSummary);
+        out.append("\n[内存与存储]\n").append(memorySummary);
+        out.append("\n[电池]\n").append(batterySummary);
+        out.append("\n[屏幕]\n").append(displaySummary);
         out.append("\n[硬件能力]\n").append(capabilityResult);
-        out.append("\n[技术原始数据]\n").append(buildTechnicalRaw(nativeResult, gpuResult, vulkanResult));
+        out.append("\n[技术原始数据]\n").append(technicalRaw);
         return out.toString();
     }
 
@@ -1509,50 +1638,40 @@ public final class MainActivity extends android.app.Activity {
         heroDetailView.setText("Android " + safe(Build.VERSION.RELEASE) + " · API " + Build.VERSION.SDK_INT
                 + "\n" + deviceProfile.label() + " · "
                 + (Build.VERSION.SDK_INT >= 23 ? "安全补丁 " + Build.VERSION.SECURITY_PATCH : "系统未公开安全补丁"));
-        String coreCount = nativeValue(snapshot.nativeResult, "POSIX 在线逻辑 CPU");
-        cpuMetric.value.setText(coreCount + " 核");
-        cpuMetric.detail.setText(nativeValue(snapshot.nativeResult, "uname.machine"));
-        gpuMetric.value.setText(shortValue(gpuValue(snapshot.gpuResult, "GL_RENDERER"), 22));
+        cpuMetric.value.setText(shortValue(summaryValue(snapshot.performanceSummary, "逻辑核心"), 18));
+        cpuMetric.detail.setText(shortValue(summaryValue(snapshot.performanceSummary, "CPU 架构"), 22));
+        gpuMetric.value.setText(shortValue(summaryValue(snapshot.performanceSummary, "GPU"), 22));
         gpuMetric.detail.setText("OpenGL ES 驱动报告");
 
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        if (manager != null) {
-            ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
-            manager.getMemoryInfo(info);
-            int used = percent(info.totalMem - info.availMem, info.totalMem);
-            memoryMetric.value.setText(bytes(info.totalMem));
-            memoryMetric.detail.setText("可用 " + bytes(info.availMem) + " · 已用 " + used + "%");
-        } else {
-            memoryMetric.value.setText("不可读取");
-            memoryMetric.detail.setText("系统内存服务不可用");
-        }
-        try {
-            StatFs fs = new StatFs(Environment.getDataDirectory().getAbsolutePath());
-            long total = fs.getTotalBytes();
-            long available = fs.getAvailableBytes();
-            storageMetric.value.setText(bytes(total));
-            storageMetric.detail.setText("可用 " + bytes(available) + " · 已用 " + percent(total - available, total) + "%");
-        } catch (Throwable ignored) {
-            storageMetric.value.setText("不可读取");
-            storageMetric.detail.setText("数据分区未公开");
-        }
-        Display display = currentDisplay();
-        if (display != null) {
-            DisplayMetrics metrics = new DisplayMetrics();
-            display.getRealMetrics(metrics);
-            displayMetric.value.setText(metrics.widthPixels + " × " + metrics.heightPixels);
-            displayMetric.detail.setText(String.format(Locale.US, "%.0f Hz · 系统逻辑显示", display.getRefreshRate()));
-        } else {
-            displayMetric.value.setText("不可读取");
-            displayMetric.detail.setText("默认显示不可用");
-        }
-        Intent battery = batteryIntent();
-        int level = battery == null ? -1 : battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-        int scale = battery == null ? -1 : battery.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-        int charge = level >= 0 && scale > 0 ? level * 100 / scale : -1;
-        batteryMetric.value.setText(charge >= 0 ? charge + "%" : "不可读取");
-        batteryMetric.detail.setText(battery == null ? "系统未提供电池广播"
-                : batteryStatus(battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1)));
+        memoryMetric.value.setText(shortValue(summaryValue(snapshot.memorySummary, "总内存"), 18));
+        String memoryAvailable = summaryValue(snapshot.memorySummary, "当前可用内存");
+        String memoryUsed = summaryValue(snapshot.memorySummary, "内存使用");
+        memoryMetric.detail.setText("可用 " + shortValue(memoryAvailable, 12) + " · 已用 " + shortValue(memoryUsed, 10));
+
+        storageMetric.value.setText(shortValue(summaryValue(snapshot.memorySummary, "存储总量"), 18));
+        storageMetric.detail.setText("可用 " + shortValue(summaryValue(snapshot.memorySummary, "可用空间"), 12));
+
+        displayMetric.value.setText(shortValue(summaryValue(snapshot.displaySummary, "屏幕分辨率"), 20));
+        displayMetric.detail.setText(shortValue(summaryValue(snapshot.displaySummary, "当前刷新率"), 20) + " · 系统逻辑显示");
+
+        String charge = summaryValue(snapshot.batterySummary, "当前电量");
+        batteryMetric.value.setText(charge);
+        batteryMetric.detail.setText(shortValue(summaryValue(snapshot.batterySummary, "当前状态"), 18));
+        batteryMetric.value.setTextColor(batteryColor(charge, batteryMetric.detail.getText().toString()));
+    }
+
+    private static String summaryValue(String summary, String key) {
+        String value = firstLineValue(summary, key + ":");
+        return value == null ? "不可读取" : value;
+    }
+
+    private static int batteryColor(String charge, String status) {
+        if (safe(status).contains("过热") || safe(status).contains("失效")) return Color.rgb(214, 101, 101);
+        Long value = leadingLong(charge);
+        if (value == null) return TEXT_SECONDARY;
+        if (value <= 15) return Color.rgb(214, 101, 101);
+        if (value <= 35) return Color.rgb(205, 164, 82);
+        return MINT;
     }
 
     private static String shortValue(String value, int max) {
@@ -1569,25 +1688,11 @@ public final class MainActivity extends android.app.Activity {
         return registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
     }
 
-    private String currentBattery() {
-        try {
-            Intent intent = batteryIntent();
-            if (intent == null) return "不可读取";
-            int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-            int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-            return level >= 0 && scale > 0 ? (level * 100 / scale) + "%" : "未知";
-        } catch (Throwable ignored) {
-            return "不可读取";
-        }
-    }
-
-    private String currentBatteryStatus() {
-        try {
-            Intent intent = batteryIntent();
-            return intent == null ? "不可读取" : batteryStatus(intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1));
-        } catch (Throwable ignored) {
-            return "不可读取";
-        }
+    private static String batteryPercent(Intent intent) {
+        if (intent == null) return "不可读取";
+        int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+        return level >= 0 && scale > 0 ? (level * 100 / scale) + "%" : "未知";
     }
 
     private void copyReport() {

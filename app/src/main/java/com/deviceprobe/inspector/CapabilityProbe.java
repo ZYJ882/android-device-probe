@@ -26,8 +26,7 @@ public final class CapabilityProbe {
         StringBuilder out = new StringBuilder();
         PackageManager pm = context.getPackageManager();
         out.append("[硬件能力总览]\n");
-        append(out, "摄像头存在", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
-                || pm.hasSystemFeature(PackageManager.FEATURE_CAMERA)));
+        append(out, "摄像头存在", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)));
         append(out, "闪光灯", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH)));
         append(out, "自动对焦", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_AUTOFOCUS)));
         append(out, "多点触控", touchCapability(pm));
@@ -35,7 +34,7 @@ public final class CapabilityProbe {
         append(out, "网络定位", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_LOCATION_NETWORK)));
         append(out, "Wi-Fi", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_WIFI)));
         append(out, "蓝牙", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)));
-        append(out, "低功耗蓝牙", yesNo(Build.VERSION.SDK_INT >= 18 && pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)));
+        append(out, "低功耗蓝牙", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)));
         append(out, "NFC", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_NFC)));
         append(out, "USB Host", yesNo(pm.hasSystemFeature(PackageManager.FEATURE_USB_HOST)));
         append(out, "电视遥控器规则", yesNo(profile.isTelevision()));

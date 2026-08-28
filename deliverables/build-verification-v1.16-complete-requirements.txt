@@ -1,0 +1,65 @@
+[build]
+Command: ./gradlew clean assembleDebug lintDebug
+Result: BUILD SUCCESSFUL; lintDebug completed without errors.
+
+[package]
+package: name='com.deviceprobe.inspector' versionCode='17' versionName='1.16.0' platformBuildVersionName='15' platformBuildVersionCode='35' compileSdkVersion='35' compileSdkVersionCodename='15'
+sdkVersion:'21'
+targetSdkVersion:'35'
+application: label='设备信息探查器' icon='res/mipmap-mdpi-v4/ic_launcher.png' banner='res/drawable-nodpi-v4/tv_banner.png'
+
+[permissions]
+No uses-permission entries.
+
+[native ABIs]
+lib/arm64-v8a/libdeviceprobe.so
+lib/armeabi-v7a/libdeviceprobe.so
+lib/x86/libdeviceprobe.so
+lib/x86_64/libdeviceprobe.so
+
+[signature]
+Verified using v1 scheme (JAR signing): true
+Verified using v2 scheme (APK Signature Scheme v2): true
+Signer #1 certificate SHA-256 digest: 976c212d0a7803b812f1c84861c812388b7c588f3b4a1ea5d8316951a34f8f01
+
+[requirement checks]
+81:    private final ExecutorService probeExecutor = Executors.newSingleThreadExecutor();
+238:        subtitle.setText("本机公开硬件信息 · v" + BuildConfig.VERSION_NAME);
+418:                "传感器", "系统枚举列表", v -> showSensorDialog());
+420:                "相机", "Camera2 元数据", v -> showCameraDialog(),
+574:                content.addView(createUsageBar("当前电量", firstLineValue(bodyText, "当前电量:")), marginParams(match(), wrap(), 0, 0, 0, dp(10)));
+576:                content.addView(createUsageBar("内存使用", firstLineValue(bodyText, "内存使用:")), marginParams(match(), wrap(), 0, 0, 0, dp(8)));
+577:                content.addView(createUsageBar("存储使用", firstLineValue(bodyText, "存储使用:")), marginParams(match(), wrap(), 0, 0, 0, dp(10)));
+624:    private View createUsageBar(String label, String value) {
+709:        badge.setOnClickListener(v -> showDataSourceDialog(key, value));
+720:    private void showDataSourceDialog(String key, String value) {
+996:        create.putExtra(Intent.EXTRA_TITLE, "device-probe-" + BuildConfig.VERSION_NAME + "." + (type == EXPORT_JSON ? "json" : "txt"));
+1025:            root.put("app_version", BuildConfig.VERSION_NAME);
+1151:    private void showCameraDialog() {
+1156:    private void showSensorDialog() {
+66:                    Integer facing = c.get(CameraCharacteristics.LENS_FACING);
+68:                    if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) front++;
+69:                    else if (facing != null && facing == CameraCharacteristics.LENS_FACING_BACK) back++;
+70:                    else if (Build.VERSION.SDK_INT >= 23 && facing != null && facing == CameraCharacteristics.LENS_FACING_EXTERNAL) external++;
+73:                            .append("（Camera2 LENS_FACING）\n");
+127:            details.append("  最大 JPEG 分辨率: ").append(largest == null ? "系统未公开" : largest.getWidth() + " × " + largest.getHeight()).append("\n");
+132:        details.append("  目标 FPS 范围: ").append(formatFpsRanges(ranges)).append("\n");
+138:        details.append("  逻辑多摄像头: ").append(logicalMulti == null ? "需要 API 28+ 公开字段" : (hasCapability(caps, logicalMulti) ? "Camera2 metadata 报告支持" : "系统未公开或不支持")).append("\n");
+192:        if (facing == CameraCharacteristics.LENS_FACING_FRONT) return "前置";
+193:        if (facing == CameraCharacteristics.LENS_FACING_BACK) return "后置";
+194:        if (Build.VERSION.SDK_INT >= 23 && facing == CameraCharacteristics.LENS_FACING_EXTERNAL) return "外置";
+46:            "RGB 渐变", "闪烁辅助（PWM）", "响应拖影", "残影老化", "色域参考", "视角", "色域检测", "官方 Display P3 红色机器人"
+256:                : (profile.isWatch() ? " · 长按画面退出" : "");
+267:    @Override public boolean onKeyDown(int keyCode, KeyEvent event) {
+283:        return super.onKeyDown(keyCode, event);
+65:        if (pm.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+68:            reasons.add("系统特性 FEATURE_WATCH");
+73:        } else if (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+77:            reasons.add(pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+78:                    ? "系统特性 FEATURE_LEANBACK" : "系统特性 FEATURE_TELEVISION");
+147:    boolean isSuspectedWatch() { return kind == Kind.WATCH && confidence == Confidence.SUSPECTED; }
+170:        if (isWatch()) return isSuspectedWatch()
+
+[integrity]
+deliverables/device-info-probe-v1.16.0-verified-hardware-debug.apk 203619 bytes
+f262ac82ca989081e1acd8d2e7c1c202f29ae65d19ca56b603ac72fbf97ebf95  deliverables/device-info-probe-v1.16.0-verified-hardware-debug.apk
