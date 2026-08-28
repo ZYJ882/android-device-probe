@@ -1,117 +1,112 @@
-# 设备信息探查器（Android 5.0+）
+# Android 设备信息探查器
 
-**版本：1.16.0**  
-**应用 ID：`com.deviceprobe.inspector`**  
-**最低支持：Android 5.0 / API 21**  
-**构建类型：已签名的 Debug APK（用于测试安装）**
+> 面向 Android 5.0 及以上设备的本地硬件与系统信息查看工具。它优先显示**当前设备确实向普通应用公开的数据**，而不是根据型号或在线数据库猜测参数。
 
-这是一个本地离线运行的 Android 设备信息查看工具。其原则不是“只要 C 语言就一定最底层”，而是**在普通应用权限边界内，让 C/NDK 优先读取内核向应用公开的真实只读数据**，并把 Android 框架提供的系统属性分开展示。
+应用以 Java 界面和 C/NDK 探测层组成，支持手机、平板、电视与手表布局。除用户主动使用系统分享或导出功能外，应用不访问网络、不上传探查结果，也不请求危险权限。
 
-> C/NDK 能够直接调用 POSIX 接口和读取普通应用可访问的 `/proc`、`/sys` 节点；它不会自动获得 root 或绕过 Android 沙箱、SELinux。数据的真实性取决于来源与权限，而不单取决于编程语言。[1] [2]
+## 设计原则
 
-## 1.16.0 专业信息界面与真实性体系重构
+| 原则 | 实现方式 |
+|---|---|
+| 真实性优先 | C/NDK 优先读取普通应用可访问的 `/proc`、`/sys` 与 POSIX 信息；Android framework、EGL/OpenGL ES、Camera2 与传感器数据作为明确标识来源的补充。 |
+| 不猜测 | 未公开、受 SELinux 限制、无法在普通应用权限下确认的信息，会显示“设备未公开”“不可读取”或“无法可靠确认”。 |
+| 数据可追溯 | 常规信息标记为系统报告、驱动报告、内核公开值、估算或无法确认；完整原文集中于“技术原始数据”。 |
+| 本地优先 | 不使用云端机型数据库，不采集账户、通讯录、位置、序列号、IMEI、广告标识符或外部存储内容。 |
+| 兼容优先 | 最低 API 21。对 API 24+ Vulkan、API 26+ 广色域等能力使用运行时判断或反射回退，旧系统只显示实际不可用状态。 |
 
-本轮改造将首页调整为“设备 Hero + CPU、GPU、RAM、存储、屏幕、电池”六张核心指标卡。设备型号、Android/API、设备类型和安全补丁在首屏集中呈现；GPU、内存、存储、显示和电池均显示主要数值与一行辅助信息。常用检测改为屏幕测试、图形 API、电池、传感器、相机和硬件能力六个直接入口，详细信息则按模块按需展开，避免首页成为原始日志墙。
+> C/NDK 能读取的是 Android 向沙箱内普通应用暴露的内核接口；它不获得 root 权限，也不能绕过 SELinux。因此，“真实”来自明确的数据来源和权限边界，而不只是使用 C 语言。[1] [2]
 
-刷新操作已改为单线程后台采集：C/NDK `/proc`、`/sys`、EGL/OpenGL ES、Vulkan loader、Camera2 和传感器枚举不再在 UI 线程执行。刷新期间操作会防重复触发，结束后显示“刚刚更新”时间。界面线程只更新已采集快照，因此不因为重型探测阻塞滚动或点击。
+## 主要功能
 
-普通详情使用紧凑的两列键值网格，并在每项下方显示**系统报告**、**驱动报告**、**内核公开值**、**估算**或**无法确认**标签。无法从普通应用可靠确认的 DDR、内存颗粒、面板型号等信息不会补猜；全部 NDK、内核、OpenGL ES 和 Vulkan 原文仍保留在默认收起的“技术原始数据”模块中。
+| 模块 | 采集内容 | 主要来源 |
+|---|---|---|
+| 设备与系统 | 厂商、型号、设备代号、Android/API、安全补丁、设备类型与手动纠正 | `Build`、`Configuration`、`PackageManager` |
+| CPU 与 ABI | 内核架构、在线逻辑核心、在线 CPU 列表、每核心当前/最大频率候选、调速器、设备/应用 ABI | C/NDK、`uname`、`/sys/devices/system/cpu`、`Build` |
+| GPU 与图形 API | OpenGL ES 厂商、渲染器、版本、GLSL、扩展数量；Vulkan loader、实例 API、物理设备、驱动和扩展 | 实际 EGL/OpenGL ES 上下文、C/NDK 动态加载 Vulkan |
+| 内存与存储 | 总内存、可用内存、使用比例、存储总量/可用量、DDR 公开字段与内存硬件名称候选 | `ActivityManager`、`StatFs`、`/proc/meminfo`、公开 `/sys` |
+| 电池 | 电量、状态、健康枚举、温度、电压、外接电源、公开的厂商/型号与条件式健康度估算 | `ACTION_BATTERY_CHANGED`、`BatteryManager`、`/sys/class/power_supply` |
+| 屏幕 | 分辨率、密度、尺寸估算、刷新率、系统广色域/HDR 报告、10-bit 公开边界 | `Display`、`DisplayManager`、公开显示节点 |
+| 硬件能力 | 摄像头存在声明、Camera2 前/后/外置方向、最大 JPEG 分辨率、FPS、AF、RAW、逻辑多摄像头公开能力、传感器与连接能力 | `PackageManager`、Camera2、`SensorManager` |
+| 屏幕测试 | 14 项纯色、灰阶、对比度、饱和度、触控、几何、渐变、闪烁辅助、拖影、残影、色域、视角等测试，含官方 Display P3 红色机器人图 | Android Canvas、MotionEvent、官方 P3 PNG |
 
-硬件能力中的相机识别已修正：`FEATURE_CAMERA_ANY` 现在仅用于“摄像头存在”的系统声明，前置、后置、外置和方向未知摄像头均由 Camera2 的 `LENS_FACING` 实际枚举得出。完整 Camera2 元数据还会在不打开相机、不申请 `CAMERA` 权限的情况下列出最大 JPEG 分辨率、目标 FPS 范围、自动对焦、RAW 与 API 28+ 逻辑多摄像头公开能力。传感器、Camera ID 和其他已采集字段可通过本地搜索定位。
+## 界面与操作
 
-应用顶部“搜索”会在当前已采集数据中匹配关键词并自动展开、定位相关模块；“报告”菜单提供复制全部信息、系统分享、通过系统文件选择器导出 TXT，以及导出结构化 JSON。JSON 每个事实字段包含 `value`、`source` 和 `confidence`；无法确认的值使用 JSON `null`，而不是把整段文本伪装为结构化数据。
+首页使用设备 Hero 和 CPU、GPU、RAM、存储、屏幕、电池六项核心指标卡，避免将原始日志直接铺满首屏。常用操作包括：
 
-## 1.16.0 官方 Display P3 红色机器人测试
+- **搜索**：在当前已采集的本地数据中查找关键词，自动展开并定位对应模块；可搜索 GPU、Vulkan、DDR、电池、相机和传感器字段。
+- **刷新**：在单线程后台重新读取 NDK、EGL/OpenGL ES、Vulkan、Camera2、传感器和 framework 数据；界面线程只更新采集完成后的快照，并防止重复刷新。
+- **报告**：复制全部信息、调用系统分享、通过系统文件选择器导出 TXT，或导出包含 `value`、`source`、`confidence` 字段的 JSON。
+- **详细信息**：常规模块默认使用键值网格；“技术原始数据”默认收起，集中保留内核节点、驱动原文和探测失败原因。
+- **屏幕测试**：进入全屏测试；电视可使用遥控器方向键切换项目，手表使用小屏布局与双箭头控制。
 
-本版将第 14 项屏幕测试替换为 Android Developers 官方文章所用的 `android_p3.png`，原始文件以 `res/raw` 资源打包，构建后 APK 内资源 SHA-256 与下载原图均为 `c39618c20ad5dfca7596bc3fbe0e37c7cc3de5cf68b78b3bf088282f2e49ea30`。该文件携带用于显示 Display P3 差异的内容；本应用不再用普通 sRGB Canvas 红色机器人替代它。[10]
+## 数据来源与可信度
 
-进入“官方 Display P3 红色机器人”时，应用会在 API 26+ 通过公开 `Window.setColorMode()` 请求广色域窗口模式，同时读取当前显示器的广色域报告并把结果显示在测试顶部。系统是否最终授予模式取决于 Android 版本、系统色彩管理和实际显示器能力；这不是运行时权限申请。切换到其他测试项目后，窗口恢复默认色彩模式。Android 5.0–7.x 仍可打开并显示原图，但会如实标明没有公开的广色域窗口模式，不能以此作出 P3 显示已生效的结论。[11]
+应用不把不同层级的数据混为一谈。每个可结构化展示的项目会按下列方式解释来源与可靠性。
 
-当 P3 图片、应用色彩管理和广色域屏幕链路全部正常时，红色背景中会显现 Android 机器人；如果只看到较均匀的红色，通常表示该图片没有按广色域路径呈现。该图用于验证此图片的显示链路，**不能**测量 DCI-P3 覆盖率、色准、亮度或面板型号，精确测量仍需要色度计。
+| 标签 | 含义 | 示例 |
+|---|---|---|
+| 系统报告 | Android framework 公开返回的运行时状态或兼容性声明 | 分辨率、当前刷新率、内存、`Display.isWideColorGamut()` |
+| 驱动报告 | 当前图形驱动或 Camera2 metadata 直接返回 | `GL_RENDERER`、Vulkan 物理设备、相机 `LENS_FACING` |
+| 内核公开值 | 当前应用能够读取的 `/proc` 或 `/sys` 值 | CPUFreq、`power_supply` 电池厂商、DDR 原始候选字段 |
+| 估算 | 由明确公式从公开值计算，不等同于硬件实测 | 屏幕对角线估算、电量计的健康度估算 |
+| 无法确认 | 系统未公开或信息不能被普通应用可靠推断 | DRAM 颗粒厂商、面板物理型号、原生 10-bit 色深 |
 
-## 1.15.0 OpenGL ES 与 Vulkan 支持检测
+## 相机信息的判定方式
 
-本版新增独立的“**图形 API**”板块。OpenGL ES 继续通过实际 EGL/OpenGL ES 离屏上下文读取 `GL_VENDOR`、`GL_RENDERER`、`GL_VERSION`、GLSL 版本和扩展数量；Vulkan 则在 C/NDK 中使用 `dlopen("libvulkan.so")` 动态加载 loader，枚举实例 API 版本、物理设备数量、设备名称、厂商/设备 ID、设备类型、设备 API/驱动版本、队列族数量和设备扩展数量。动态加载使同一个最低 API 21 安装包能够在 Android 5.0 设备上安全运行：没有 Vulkan loader 的设备只显示不可用，不会因静态链接 Vulkan 导致启动失败。[8] [9]
+`FEATURE_CAMERA_ANY` 仅代表系统声明存在任意摄像头，**不能**当作“后置摄像头”。应用会使用 Camera2 的 `CameraCharacteristics.LENS_FACING` 实际枚举前置、后置、外置与方向未知的 Camera ID，并在系统公开时显示最大 JPEG 输出分辨率、目标 FPS 范围、自动对焦、RAW 与 API 28+ 逻辑多摄像头能力。
 
-Vulkan 的“系统特性已声明”与“原生物理设备已枚举”被刻意分开显示。前者是 Android framework 的兼容性声明，后者是当前 loader/驱动的实际探测结果；当厂商实现不公开字段、系统版本低于 API 24 或驱动加载失败时，应用显示实际不可读状态，不用机型数据库猜测。OpenGL ES 与 Vulkan 是两套独立 API，检测到其中一套并不代表另一套必然可用。
+上述采集不打开相机、不预览、不拍照，也不请求 `CAMERA` 权限。相机模组供应商、镜头传感器型号等未被系统公开的字段不会被机型数据库补全。[3]
 
-## 信息架构演进（v1.14 基础）
+## 广色域与屏幕测试说明
 
-详细信息分成两层：第一层是普通用户优先的“设备与系统”“性能与芯片”“图形 API”“内存与存储”“电池”“屏幕”“硬件能力”，以可读的键值网格显示结论与来源标签；第二层是默认收起的“技术原始数据”，集中保留 C/NDK、GPU、CPU、内存、DDR、屏幕和电池的原始内容。
+“官方 Display P3 红色机器人”使用 Android Developers 文章中提供的原始 `android_p3.png`。进入该项目时，应用在 Android 8.0/API 26 及以上请求广色域窗口模式，并显示系统报告的广色域状态。Android 5.0–7.x 仍可打开原图，但会明确说明系统没有公开的广色域窗口模式。
 
-普通用户优先看到的是“总内存、当前可用内存、分辨率、刷新率、电量、健康状态”等易懂名称。处理器 ABI 与 GPU 信息集中于“性能与芯片”；DDR 和内存硬件候选集中于“内存与存储”；电池厂商和型号集中于“电池”。需要排查问题时，再展开单一的“技术原始数据”查看 C/NDK、`/proc`、`/sys` 和驱动原始值。
+如果应用、系统色彩管理和广色域显示链路均正常，红色背景中的机器人应当可见。该图用于观察图片的显示链路，**不是**色域覆盖率、色准、亮度、面板供应商或原生色深的仪器测量。此类指标仍需色度计等专业设备。[4] [5]
 
-厂商信息分别归入“内存与存储”和“电池”模块：电池优先展示 `power_supply` 驱动实际公开的 `manufacturer`、`model_name`/`model`，并尝试读取 Linux memory block 的 `phys_device` 作为内存硬件名称候选。标准 Android 普通应用通常无法可靠获得 DRAM 颗粒厂商和电量计芯片厂商；应用会明确显示“未公开或无法确认”，不会依据手机型号猜测。
+## 兼容性
 
-新增“屏幕测试”入口，使用 Android 自定义 View/Canvas 绘制全屏测试图案，包含坏点/亮点/暗点纯色、灰阶、对比度、色彩饱和度、触控、几何/边缘、RGB 渐变、闪烁辅助（PWM）、响应拖影、残影老化、色域参考、视角和色域检测共 14 项。新增“官方 Display P3 红色机器人”图案，原图在 API 26+ 请求广色域窗口后显示，并在顶部报告系统的请求与显示器状态。测试页面支持上一项、下一项、退出；纯色测试点击画面切换颜色，触控测试显示手指轨迹。坏点、视角、拖影、残影和 PWM 只能由用户观察或外部相机/仪器辅助判断，软件不会伪造自动诊断结果；实际色域测量需要校色仪。
+| 项目 | 支持范围 |
+|---|---|
+| 最低系统版本 | Android 5.0 / API 21 |
+| 构建 SDK | compileSdk 35，targetSdk 35 |
+| 原生 ABI | `armeabi-v7a`、`arm64-v8a`、`x86`、`x86_64` |
+| 图形 API | OpenGL ES 实际上下文检测；Vulkan 通过动态 `libvulkan.so` 加载，旧系统无 loader 时安全显示不可用。 |
+| 设备形态 | 手机、平板、Android TV/Leanback、Wear OS 与部分未声明 Wear feature 的原生 Android 手表。 |
+| 权限 | 无 `uses-permission` 条目。 |
 
-应用会自动识别设备类型，优先检查 Android 公开系统特性，而不是只按分辨率猜测：`FEATURE_WATCH` 或 `UI_MODE_TYPE_WATCH` 确认为手表；`FEATURE_LEANBACK`、`FEATURE_TELEVISION` 或电视 UI 模式确认为电视；未命中时按 `smallestScreenWidthDp` 辅助区分平板和手机。电视端会显示大屏规则，所有操作按钮和可展开板块均可获得焦点并以薄荷绿描边提示；屏幕测试支持遥控器左/上切换上一项、右/下切换下一项、确认键切换纯色。手表端使用单列紧凑概览、较小边距、两枚箭头控制屏幕测试，并支持长按测试画面退出；测试图案会按实际可用显示区域、手表小屏网格和色阶数量重新绘制。
+电视启动器提供 16:9 Banner，并显式声明触控为可选；这使同一个 APK 不会因默认触控要求而被电视设备过滤。手表类型无法由标准特征确认时，应用只会标记为“疑似 Android 手表”，并保留用户手动纠正选项。[6] [7]
 
-对于华强北等可能未声明标准 Wear 特性的原生 Android 套壳手表，应用会以“**疑似 Android 手表**”显示，而不是把推断伪装成事实。该判断要求多个公开线索同时满足，例如很小的最小宽度、较短的像素边长、接近方形的显示比例，或 API 23+ 的圆屏线索；设备与系统板块会逐项列出依据。首页新增“**纠正设备类型**”入口，可选自动、手机、平板、电视或手表；选择只保存在本应用中并影响布局规则，不修改系统，且仍保留自动判定供比对。品牌、机型和“和顺成”等方案名称不会用于断言系统类型。
+## 已知边界
 
-新增“**性能硬件详情**”板块。CPU 由 C/NDK 显示 `uname.machine`、POSIX 在线逻辑核心、`/sys` 在线 CPU 列表，以及设备实际公开的每核心拓扑、调速器、当前/最大频率候选节点；GPU 在本应用创建离屏 EGL/OpenGL ES 上下文后读取 `GL_VENDOR`、`GL_RENDERER`、`GL_VERSION`、GLSL 版本与扩展数量；内存并列显示 Android `MemoryInfo` 的总量/可用量/阈值和 `/proc/meminfo` 的 `MemTotal`、`MemAvailable`、缓存、可回收缓存与 swap。CPU 频率、GPU 字符串和内存字段均来自实际系统/驱动公开值；节点不可读时显示实际状态，不会用 SoC 数据库推测。
+| 无法可靠直接读取的项目 | 原因与应用行为 |
+|---|---|
+| DDR 代际与 DRAM 颗粒厂商 | 仅在公开字段明确包含 `DDR`、`LPDDR` 或 `HBM` 时确认；动态频率、机型、SoC 名称和容量不用于推断。 |
+| 面板型号、供应商和原生 10-bit | Android 没有适用于普通应用的统一公开接口；HDR/广色域声明不被当作面板物理参数证明。 |
+| 色域覆盖率、色准、亮度、PWM 频率 | 屏幕图案为视觉观察工具；精确测量需要外部相机、示波器或色度计。 |
+| 电池真实化学健康度 | 仅在驱动同时公开 `charge_full` 和 `charge_full_design` 时计算电量计估算值，不宣称实验室测量结果。 |
+| 受权限限制的内核节点 | 保留实际不可读状态或错误原因；应用不尝试 root、`su` 或修改 SELinux。 |
 
-内存详情现已增加“**DDR 内存类型**”。C/NDK 会检查设备实际公开的 memory controller、运行时设备树、debugfs 与 devfreq 候选属性。**只有**原始值明确含 `DDR`、`LPDDR` 或 `HBM` 时，才显示为已确认的内存类型并附原始路径；否则会显示“无法从普通应用可靠确认”。动态内存频率、机型、SoC 名称、内存容量和品牌均不会被用于推断 DDR 代际；`devfreq` 节点只作为内存控制器/动态频率信息展示。完整原始结果位于默认收起的“技术原始数据”模块。
+## 安装
 
-本应用保留直观概览、硬件能力列表和单项测试入口：首页使用设备 Hero 和 CPU、GPU、RAM、存储、屏幕、电池六张核心指标卡；“硬件能力”通过 Android `PackageManager`、Camera2 和 `SensorManager` 显示系统公开能力、实际枚举的相机方向与传感器清单；首页“屏幕测试”直接进入 14 项屏幕测试，其中包含官方 Display P3 红色机器人测试。它不会把机型资料、网上参数或 feature flag 伪装成实际芯片或模组信息。
+请从仓库的 **[Releases](https://github.com/ZYJ882/android-device-probe/releases)** 页面下载最新 APK。当前提供的测试包使用 Debug 签名；Android 5.0 通常需要允许“未知来源”，较新 Android 版本需要允许用于安装的文件管理器或浏览器“安装未知应用”。
 
-屏幕板块现增加可验证的系统级**广色域（Wide Color Gamut）**、**HDR 类型**与 **10-bit 显示边界**。广色域使用 `Display.isWideColorGamut()` 的系统报告（API 26+），HDR 使用 `Display.getHdrCapabilities()` 的系统报告（API 24+），均以反射方式调用以确保 Android 5.0 兼容。系统报告的广色域/HDR 能力不能单独证明面板原生 10-bit；Android 没有供普通应用统一确认面板原生 10-bit 的公开 API，因此会如实显示这一限制。屏幕测试中的色域图案是视觉参考，色域覆盖率和色准仍需色度计实测。
-
-本版以“**一项结论，一个常用入口**”为原则组织页面：首页使用“搜索、刷新、报告”三个顶部操作和六项快速检测入口；已移除与新概览重复的旧分类导航、即时状态进度条及其相关刷新逻辑。详细信息保留“设备与系统、性能与芯片、图形 API、内存与存储、电池、屏幕、硬件能力”七组；内存/电池厂商各自合并进所属板块，所有 NDK、GPU、CPU、DDR、屏幕和电池原始信息合并为一个默认收起的“技术原始数据”入口。手动设备类型纠正只在疑似手表时显示。
-
-
-应用 ID 为 **`com.deviceprobe.inspector`**，不含 `manus`。新的应用 ID 同时用于 Java 包命名空间与 C/NDK 的 JNI 导出函数名，二者已经同步迁移。
-
-| 展示板块 | 读取来源 | 数据示例 | 默认状态 |
-|---|---|---|---|
-| 设备与系统 | Android `Build` | 厂商、型号、Android 版本、安全补丁、设备代号 | 展开 |
-| 屏幕 | `Display`、`DisplayManager` 与公开 sysfs 候选节点 | 分辨率、密度、刷新率、广色域系统检测、HDR 类型、10-bit 公开边界、面板公开边界 | 收起 |
-| 内存与存储 | `ActivityManager.MemoryInfo`、`/proc/meminfo`、`StatFs`、DDR 候选节点 | 总/可用内存、DDR 类型结论、阈值、缓存、swap、分区空间 | 收起 |
-| 电池 | 电池粘性广播、`BatteryManager`、`/sys/class/power_supply` | 电量、健康枚举、电压、温度、电流、计数、SOH 条件估算 | 收起 |
-| 性能与芯片 | C/NDK、公开 `sysfs`、`Build` | CPU 架构/频率候选、当前 native ABI 与设备首选 ABI | 收起 |
-| 图形 API | 实际 EGL/OpenGL ES 上下文、Android framework、C/NDK 动态 Vulkan loader | OpenGL ES 厂商/渲染器/版本、Vulkan 系统特性、设备和驱动版本、扩展数量 | 收起 |
-| 硬件能力 | `PackageManager`、Camera2、`SensorManager` | 摄像头存在声明、Camera2 前/后/外置方向、JPEG/FPS/AF/RAW 元数据、触控、定位、Wi-Fi、蓝牙、NFC、USB、传感器清单；仅显示公开声明/枚举结果 | 收起 |
-| 屏幕测试 | Android Canvas、MotionEvent、官方 Display P3 PNG、全屏沉浸式 Activity | 14 项显示/触控测试图案；第 14 项请求广色域窗口并显示官方 P3 原图；自动适配电视/手表控制 | 入口 |
-| 设备类型与布局 | `PackageManager`、`Configuration.uiMode`、显示指标 | 确认/疑似/未确认的手机、平板、电视、手表识别，判定依据与手动纠正 | 设备与系统 |
-| 技术原始数据 | C/NDK、`/proc`、公开 `sysfs`、实际 EGL/OpenGL ES 上下文、动态 Vulkan loader | CPU、OpenGL ES、Vulkan、内存、屏幕、DDR 和电池的全部原始读取结果 | 收起 |
-| 数据边界 | C/NDK 采集过程的实际结果 | 可读性、沙箱和 SELinux 限制；每个结构化 JSON 字段附来源和可信度 | 收起 |
-
-## 功能与隐私边界
-
-本应用不申请任何 Android 权限，不访问网络，不读取账户、联系人、位置、电话号、IMEI、序列号、广告标识符、相册或外部存储内容。它不尝试 root、提权、执行 `su`、修改 SELinux，也不会把不可读取的文件伪造成“设备不存在”。每一个无法读取的内核节点将显示实际失败原因。
-
-界面提供本地搜索、后台刷新、复制/分享报告、TXT/JSON 导出和屏幕测试入口。应用本身不会上传探查结果；导出仅在用户通过系统文件选择器主动选择目标位置后执行。
-
-## 安装方法
-
-将 `device-info-probe-v1.16.0-pro-ui-debug.apk` 复制到目标设备后，用系统“文件管理”或“下载”应用打开安装。Android 5.0 通常需要在“设置 → 安全”中临时允许“未知来源”；较新系统会要求为用于安装的应用单独允许“安装未知应用”。也可在已启用开发者选项和 USB 调试的情况下执行：
+也可在已开启 USB 调试的设备上使用：
 
 ```bash
-adb install -r device-info-probe-v1.16.0-pro-ui-debug.apk
+adb install -r <downloaded-apk>.apk
 ```
 
-安装包为**测试签名** Debug APK，已经通过 v1 和 v2 签名验证，其中 v1 签名可支持 Android 5.0 的安装。它适合直接安装验证；若将来要公开发布或持续升级，应使用您自己妥善保管的发布密钥重新签名，切勿把调试签名当作生产签名。
+> Debug 签名仅适合测试安装。若要公开分发、长期维护或发布到应用商店，请使用您自己妥善保管的发布密钥生成 Release APK。
 
-## 构建验证结果
+## 从源码构建
 
-| 项目 | 已验证结果 |
-|---|---|
-| 应用 ID / 版本 | `com.deviceprobe.inspector` / `1.16.0`（versionCode 17） |
-| 最低 SDK | `21`（Android 5.0） |
-| 运行权限 | 无 `uses-permission` 条目 |
-| 签名 | APK Signature Scheme v1、v2 均已验证 |
-| 启动器图标 | `mdpi`、`hdpi`、`xhdpi`、`xxhdpi`、`xxxhdpi` 五种密度资源已打包 |
-| 原生 ABI | `armeabi-v7a`、`arm64-v8a`、`x86`、`x86_64` |
-| target SDK | `35`（不影响 `minSdk 21` 的 Android 5.0+ 兼容范围） |
-| 图形 API | OpenGL ES 实际 EGL 上下文；Vulkan 动态 `libvulkan.so` 查询，不静态链接 |
-| 官方 P3 图片 | `res/raw/android_p3.png` 原图字节已核对；APK 内 SHA-256 一致 |
-| APK SHA-256 | `01278bce91879fa22d57a236138f583c9eb128e222a90e6d33c0ef7774160e2c` |
+项目使用 Gradle、Java、CMake 和 Android NDK。准备 Android SDK Platform 35、Build Tools 35.0.0、NDK 27.2.12479018 与 CMake 3.22.1 后，在项目根目录创建 `local.properties` 并设置 SDK 路径：
 
-完整验证记录见 `deliverables/build-verification-v1.16-pro-ui.txt`。
+```properties
+sdk.dir=/path/to/Android/Sdk
+```
 
-## 从源码重建
-
-项目包含 Gradle wrapper、Java 界面源码、C/NDK 源码与各密度图标资源。安装 Android SDK Platform 35、Build Tools 35.0.0、NDK 27.2.12479018、CMake 3.22.1 后，将 `local.properties` 的 `sdk.dir` 改为您的 Android SDK 路径，再在项目根目录执行：
+然后执行：
 
 ```bash
 ./gradlew assembleDebug
@@ -123,20 +118,34 @@ adb install -r device-info-probe-v1.16.0-pro-ui-debug.apk
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
+建议在提交前执行完整验证：
+
+```bash
+./gradlew clean assembleDebug lintDebug
+```
+
+## 项目结构
+
+```text
+app/
+├── src/main/cpp/                 # C/NDK：/proc、/sys、CPU、内存、电池、动态 Vulkan 探测
+├── src/main/java/.../            # Java：界面、EGL/OpenGL ES、Camera2、设备类型与屏幕测试
+├── src/main/res/raw/android_p3.png   # 官方 Display P3 测试图
+├── src/main/res/drawable-nodpi/  # TV Leanback Banner
+└── build.gradle                  # SDK、ABI、CMake 与版本配置
+deliverables/                     # 当前构建验证记录与交付说明
+```
+
+## 版本与发布
+
+仓库主页只维护稳定的功能、边界、构建和使用说明。每次版本的新增功能、修复、兼容性变化、APK 校验值与下载附件均发布在 **[GitHub Releases](https://github.com/ZYJ882/android-device-probe/releases)**，不在本 README 中累积版本流水账。
+
 ## 参考资料
 
 [1]: https://developer.android.com/ndk/guides/stable_apis "Native APIs | Android NDK"
 [2]: https://source.android.com/docs/security/features/selinux "Security-Enhanced Linux in Android | AOSP"
-[3]: https://developer.android.com/reference/android/os/Build "Build | Android API Reference"
-[4]: https://developer.android.com/reference/android/hardware/display/DisplayManager "DisplayManager | Android Developers"
-[5]: https://developer.android.com/reference/android/app/ActivityManager.MemoryInfo "ActivityManager.MemoryInfo | Android Developers"
-[6]: https://developer.android.com/reference/android/os/BatteryManager "BatteryManager | Android Developers"
-[7]: https://source.android.com/docs/core/perf/health/implementation-2-1 "Implement Health 2.1 | Android Open Source Project"
-[8]: https://developer.android.com/ndk/guides/graphics "Graphics | Android NDK"
-[9]: https://developer.android.com/reference/android/content/pm/PackageManager#FEATURE_VULKAN_HARDWARE_LEVEL "PackageManager Vulkan feature constants | Android Developers"
-[10]: https://android-developers.googleblog.com/2019/05/wide-color-photos-are-coming-to-android.html "Wide Color Photos Are Coming to Android | Android Developers Blog"
-[11]: https://developer.android.com/training/wide-color-gamut "Enhance graphics with wide color content | Android Developers"
-
----
-
-更新日期：2026-08-28
+[3]: https://developer.android.com/reference/android/hardware/camera2/CameraCharacteristics "CameraCharacteristics | Android Developers"
+[4]: https://android-developers.googleblog.com/2019/05/wide-color-photos-are-coming-to-android.html "Wide Color Photos Are Coming to Android | Android Developers Blog"
+[5]: https://developer.android.com/training/wide-color-gamut "Enhance graphics with wide color content | Android Developers"
+[6]: https://developer.android.com/training/tv/start/start.html "Build TV apps | Android Developers"
+[7]: https://developer.android.com/guide/topics/manifest/uses-feature-element.html "<uses-feature> | Android Developers"
