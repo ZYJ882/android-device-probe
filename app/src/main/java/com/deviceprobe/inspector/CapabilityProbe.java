@@ -2,6 +2,7 @@ package com.deviceprobe.inspector;
 
 import android.content.Context;
 import android.graphics.ImageFormat;
+import android.graphics.Rect;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
@@ -153,7 +154,12 @@ public final class CapabilityProbe {
         details.append("  真实光学焦距: ").append(formatFloatArray(focalLengths, "mm", "系统未公开")).append("\n");
         SizeF sensorSize = c.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
         details.append("  传感器物理尺寸: ").append(formatSensorSize(sensorSize)).append("（Camera2 原始/未公开）\n");
+        details.append("  传感器像素阵列: ").append(formatSize(c.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE))).append("（Camera2 原始/未公开）\n");
+        details.append("  有效感光区域: ").append(formatRect(c.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE))).append("（Camera2 原始/未公开）\n");
         details.append("  35mm 等效焦距: ").append(formatEquivalentFocal(focalLengths, sensorSize)).append("（计算值，不是真实焦距）\n");
+        details.append("  超焦距: ").append(formatDistance(c.get(CameraCharacteristics.LENS_INFO_HYPERFOCAL_DISTANCE), "m", "系统未公开")).append("\n");
+        details.append("  对焦距离校准: ").append(formatFocusCalibration(c.get(CameraCharacteristics.LENS_INFO_FOCUS_DISTANCE_CALIBRATION))).append("\n");
+        details.append("  滤镜密度: ").append(formatFloatArray(c.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FILTER_DENSITIES), "", "系统未公开")).append("（Camera2 原始）\n");
         details.append("  光圈值: ").append(formatFloatArray(apertures, "f", "系统未公开")).append("\n");
         Float minFocusDiopter = c.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
         details.append("  最小对焦距离: ").append(formatMinimumFocus(minFocusDiopter)).append("\n");
@@ -164,7 +170,10 @@ public final class CapabilityProbe {
         details.append("  【拍摄能力】\n");
         Size largestVideo = largestSize(videoSizes);
         details.append("  最大视频分辨率: ").append(largestVideo == null ? "系统未公开" : formatSize(largestVideo)).append("\n");
-        details.append("  最大视频帧率: ").append(formatFpsRanges(c.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES))).append("\n");
+        details.append("  支持的视频尺寸: ").append(formatSizes(videoSizes, 8)).append("\n");
+        details.append("  最大视频帧率: ").append(formatFpsRanges(c.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES))).append("（Camera2 目标范围，未绑定具体分辨率）\n");
+        details.append("  最大数字变焦: ").append(formatZoom(c.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM))).append("\n");
+        details.append("  JPEG 缩略图尺寸: ").append(formatSizes(c.get(CameraCharacteristics.JPEG_AVAILABLE_THUMBNAIL_SIZES), 6)).append("\n");
         Range<Integer> isoRange = c.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
         details.append("  ISO 范围: ").append(isoRange == null ? "系统未公开" : isoRange.getLower() + "–" + isoRange.getUpper()).append("（Camera2 原始）\n");
         Range<Long> exposureRange = c.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
@@ -174,6 +183,10 @@ public final class CapabilityProbe {
         details.append("  闪光灯: ").append(formatBoolean(c.get(CameraCharacteristics.FLASH_INFO_AVAILABLE))).append("\n");
         details.append("  HDR: ").append(formatHdr(c)).append("（硬件/逻辑能力，不代表夜景模式）\n");
         details.append("  人脸检测: ").append(formatFaceDetect(c.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_FACE_DETECT_MODES))).append("\n");
+        details.append("  最大人脸数量: ").append(formatInteger(c.get(CameraCharacteristics.STATISTICS_INFO_MAX_FACE_COUNT))).append("\n");
+        details.append("  AE 区域数: ").append(formatInteger(c.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE))).append("\n");
+        details.append("  AWB 区域数: ").append(formatInteger(c.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AWB))).append("\n");
+        details.append("  AF 区域数: ").append(formatInteger(c.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF))).append("\n");
         details.append("  自动曝光 AE: ").append(formatModeSupport(c.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES), CameraMetadata.CONTROL_AE_MODE_OFF)).append("\n");
         details.append("  自动白平衡 AWB: ").append(formatModeSupport(c.get(CameraCharacteristics.CONTROL_AWB_AVAILABLE_MODES), CameraMetadata.CONTROL_AWB_MODE_OFF)).append("\n");
 
@@ -249,6 +262,11 @@ public final class CapabilityProbe {
         return out.toString();
     }
 
+    private static String formatRect(Rect rect) {
+        if (rect == null) return "系统未公开";
+        return rect.width() + " × " + rect.height() + " px";
+    }
+
     private static String formatSensorSize(SizeF sensorSize) {
         if (sensorSize == null) return "系统未公开";
         return String.format(Locale.US, "%.2f × %.2f mm", sensorSize.getWidth(), sensorSize.getHeight());
@@ -259,6 +277,30 @@ public final class CapabilityProbe {
         double sensorDiagonal = Math.sqrt(sensorSize.getWidth() * sensorSize.getWidth() + sensorSize.getHeight() * sensorSize.getHeight());
         double equivalent = focalLengths[0] * 43.266 / sensorDiagonal;
         return String.format(Locale.US, "约 %.1f mm", equivalent);
+    }
+
+    private static String formatDistance(Float value, String unit, String unknown) {
+        if (value == null || value <= 0) return unknown;
+        return String.format(Locale.US, "%.2f %s（Camera2 原始）", value, unit);
+    }
+
+    private static String formatFocusCalibration(Integer calibration) {
+        if (calibration == null) return "系统未公开";
+        switch (calibration) {
+            case CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_UNCALIBRATED: return "未校准";
+            case CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_APPROXIMATE: return "近似校准";
+            case CameraMetadata.LENS_INFO_FOCUS_DISTANCE_CALIBRATION_CALIBRATED: return "已校准";
+            default: return "模式 " + calibration;
+        }
+    }
+
+    private static String formatInteger(Integer value) {
+        return value == null ? "系统未公开" : String.valueOf(value);
+    }
+
+    private static String formatZoom(Float value) {
+        if (value == null || value <= 0) return "系统未公开";
+        return String.format(Locale.US, "%.2f×（Camera2 原始）", value);
     }
 
     private static String formatMinimumFocus(Float diopter) {

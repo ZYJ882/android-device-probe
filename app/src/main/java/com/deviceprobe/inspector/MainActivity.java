@@ -747,8 +747,8 @@ public final class MainActivity extends android.app.Activity {
         if (value.contains("无法") || value.contains("未公开") || value.contains("不可读取") || value.contains("未提供")) {
             tag = "无法确认";
             color = Color.rgb(120, 134, 153);
-        } else if (value.contains("估算") || key.contains("估算")) {
-            tag = "估算";
+        } else if (value.contains("估算") || value.contains("计算值") || value.contains("推断") || key.contains("估算")) {
+            tag = value.contains("推断") ? "推断" : "计算值";
             color = Color.rgb(205, 164, 82);
         } else if (key.contains("GPU") || key.contains("OpenGL") || key.contains("Vulkan")) {
             tag = "驱动报告";
@@ -756,8 +756,8 @@ public final class MainActivity extends android.app.Activity {
         } else if (key.contains("DDR") || key.contains("内核") || key.contains("频率") || key.contains("厂商")) {
             tag = "内核公开值";
             color = Color.rgb(75, 174, 152);
-        } else if (key.contains("摄像头")) {
-            tag = "Camera2 / 系统";
+        } else if (isCameraField(key)) {
+            tag = "Camera2 metadata";
             color = Color.rgb(96, 162, 213);
         } else {
             tag = "系统报告";
@@ -1107,12 +1107,23 @@ public final class MainActivity extends android.app.Activity {
                 || lower.contains("无法确认") || lower.contains("未知") || lower.contains("不可用");
     }
 
+    private static boolean isCameraField(String key) {
+        return key.contains("Camera") || key.contains("camera") || key.contains("摄像头")
+                || key.contains("照片") || key.contains("视频") || key.contains("焦距")
+                || key.contains("光圈") || key.contains("对焦") || key.contains("传感器物理")
+                || key.contains("ISO") || key.contains("曝光") || key.contains("防抖")
+                || key.contains("RAW") || key.contains("HDR") || key.contains("人脸")
+                || key.contains("Logical") || key.contains("Physical") || key.contains("硬件级别")
+                || key.contains("Manual") || key.contains("Burst") || key.contains("自动曝光")
+                || key.contains("自动白平衡") || key.contains("闪光灯");
+    }
+
     private static String sourceFor(String key, String value, String fallback) {
         String combined = key + " " + value;
+        if (isCameraField(key) || combined.contains("Camera2") || combined.contains("cameraId")) return "Camera2 metadata";
         if (combined.contains("OpenGL") || combined.contains("GL_")) return "OpenGL ES Driver";
         if (combined.contains("Vulkan")) return "Vulkan Driver / Android Framework";
         if (combined.contains("power_supply") || combined.contains("电量计")) return "Battery power_supply";
-        if (combined.contains("Camera2") || combined.contains("cameraId")) return "Camera2";
         if (combined.contains("DDR") || combined.contains("内核") || combined.contains("CPU ")) return "/proc or /sys public node";
         if (combined.contains("屏幕") || combined.contains("HDR") || combined.contains("广色域")) return "Android Display API";
         return fallback;
@@ -1120,10 +1131,11 @@ public final class MainActivity extends android.app.Activity {
 
     private static String confidenceFor(String key, String value, String fallback) {
         String combined = key + " " + value;
-        if (combined.contains("估算") || combined.contains("推算")) return "estimated";
+        if (combined.contains("估算") || combined.contains("计算值") || combined.contains("推断") || combined.contains("推算")) return "estimated";
         if (combined.contains("系统报告") || combined.contains("系统声明")) return "system_reported";
         if (combined.contains("驱动")) return "driver_reported";
         if (combined.contains("内核") || combined.contains("power_supply")) return "kernel_reported";
+        if (isCameraField(key) || combined.contains("Camera2")) return "camera2_reported";
         return fallback;
     }
 

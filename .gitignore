@@ -12,9 +12,10 @@ local.properties
 # Keep only the verified current install package and its verification record.
 *.apk
 deliverables/*.txt
-!deliverables/device-info-probe-v1.17.0-camera-detail-debug.apk
-!deliverables/build-verification-v1.17-camera-detail.txt
+!deliverables/device-info-probe-v1.18.0-final-debug.apk
+!deliverables/final-verification-v1.18.0.txt
 *.zip
+deliverables/*.md
 
 # OS/editor files
 .DS_Store
