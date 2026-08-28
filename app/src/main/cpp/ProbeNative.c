@@ -364,7 +364,7 @@ static void append_vulkan_report(char *report, size_t capacity) {
         return;
     }
     VkApplicationInfo app_info = { VK_STRUCTURE_TYPE_APPLICATION_INFO, NULL,
-            "DeviceProbe", VK_MAKE_VERSION(1, 14, 0), "DeviceProbe", VK_MAKE_VERSION(1, 0, 0), api_version };
+            "DeviceProbe", VK_MAKE_VERSION(1, 16, 0), "DeviceProbe", VK_MAKE_VERSION(1, 0, 0), api_version };
     VkInstanceCreateInfo create_info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, NULL, 0,
             &app_info, 0, NULL, 0, NULL };
     VkInstance instance = VK_NULL_HANDLE;

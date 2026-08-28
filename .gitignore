@@ -12,8 +12,9 @@ local.properties
 # Keep only the verified current install package and its verification record.
 *.apk
 deliverables/*.txt
-!deliverables/device-info-probe-v1.16.0-official-p3-debug.apk
-!deliverables/build-verification-v1.16-official-p3.txt
+!deliverables/device-info-probe-v1.16.0-pro-ui-debug.apk
+!deliverables/build-verification-v1.16-pro-ui.txt
+*.zip
 
 # OS/editor files
 .DS_Store
