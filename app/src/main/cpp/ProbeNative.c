@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/utsname.h>
@@ -16,15 +17,43 @@
 #define REPORT_CAPACITY 65536
 #define READ_CAPACITY 8192
 
+static void mark_report_truncated(char *report, size_t capacity) {
+    static const char marker[] = "\n（报告已截断）\n";
+    size_t marker_len = sizeof(marker) - 1;
+    if (capacity == 0) return;
+    if (marker_len + 1 >= capacity) {
+        report[capacity - 1] = '\0';
+        return;
+    }
+    memcpy(report + capacity - marker_len - 1, marker, marker_len);
+    report[capacity - 1] = '\0';
+}
+
 static void appendf(char *report, size_t capacity, const char *format, ...) {
     size_t used = strlen(report);
-    if (used >= capacity - 1) {
+    if (capacity == 0 || used >= capacity - 1) {
+        mark_report_truncated(report, capacity);
         return;
     }
     va_list args;
     va_start(args, format);
-    vsnprintf(report + used, capacity - used, format, args);
+    int written = vsnprintf(report + used, capacity - used, format, args);
     va_end(args);
+    if (written < 0 || (size_t) written >= capacity - used) {
+        mark_report_truncated(report, capacity);
+    }
+}
+
+static ssize_t read_full(int fd, void *buffer, size_t capacity) {
+    size_t total = 0;
+    while (total < capacity) {
+        ssize_t count = read(fd, (char *) buffer + total, capacity - total);
+        if (count > 0) total += (size_t) count;
+        else if (count == 0) break;
+        else if (errno == EINTR) continue;
+        else return -1;
+    }
+    return (ssize_t) total;
 }
 
 static void append_key_value(char *report, size_t capacity, const char *key, const char *value) {
@@ -48,7 +77,7 @@ static int read_text_file(const char *path, char *buffer, size_t capacity) {
     if (capacity == 0) return -1;
     int fd = open(path, O_RDONLY | O_CLOEXEC);
     if (fd < 0) return -1;
-    ssize_t count = read(fd, buffer, capacity - 1);
+    ssize_t count = read_full(fd, buffer, capacity - 1);
     int saved_errno = errno;
     close(fd);
     if (count < 0) {
@@ -80,7 +109,7 @@ static void append_binary_hex_source(char *report, size_t capacity, const char *
         appendf(report, capacity, "\n-- %s --\n不可读: %s\n", path, strerror(errno));
         return;
     }
-    ssize_t count = read(fd, data, read_limit);
+    ssize_t count = read_full(fd, data, read_limit);
     int saved_errno = errno;
     close(fd);
     if (count < 0) {
@@ -291,6 +320,26 @@ static bool append_cpu_node(char *report, size_t capacity, int cpu, const char *
     return false;
 }
 
+static int cpu_limit_from_present(void) {
+    char present[256];
+    if (read_text_file("/sys/devices/system/cpu/present", present, sizeof(present)) != 0) {
+        long configured = sysconf(_SC_NPROCESSORS_CONF);
+        return configured > 0 && configured < 1024 ? (int) configured : 16;
+    }
+    int max_cpu = -1;
+    char *save = NULL;
+    for (char *token = strtok_r(present, ",", &save); token != NULL; token = strtok_r(NULL, ",", &save)) {
+        int start = -1;
+        int end = -1;
+        if (sscanf(token, "%d-%d", &start, &end) == 2) {
+            if (end > max_cpu) max_cpu = end;
+        } else if (sscanf(token, "%d", &start) == 1 && start > max_cpu) {
+            max_cpu = start;
+        }
+    }
+    return max_cpu >= 0 && max_cpu < 1023 ? max_cpu + 1 : 16;
+}
+
 static void append_cpu_detail_report(char *report, size_t capacity) {
     static const char *relatives[] = {
             "online", "topology/physical_package_id", "topology/core_id", "topology/cluster_id",
@@ -306,7 +355,9 @@ static void append_cpu_detail_report(char *report, size_t capacity) {
     appendf(report, capacity, "\n[CPU 深度原始节点]\n");
     appendf(report, capacity, "候选 sysfs 节点由内核/厂商决定；只打印当前应用成功读取的值。频率单位通常为 kHz。\n");
     bool found = false;
-    for (int cpu = 0; cpu < 16; ++cpu) {
+    int cpu_limit = cpu_limit_from_present();
+    appendf(report, capacity, "CPU present 动态遍历上限: %d\n", cpu_limit);
+    for (int cpu = 0; cpu < cpu_limit; ++cpu) {
         char path[256];
         snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%d", cpu);
         if (access(path, F_OK) != 0) continue;
@@ -408,7 +459,11 @@ static void append_vulkan_report(char *report, size_t capacity) {
                     if (enumerate_extensions != NULL) {
                         uint32_t extension_count = 0;
                         VkResult extension_result = enumerate_extensions(devices[index], NULL, &extension_count, NULL);
-                        appendf(report, capacity, "设备%d 扩展数量: %u（VkResult=%d）\n", index, extension_count, extension_result);
+                        if (extension_result == VK_SUCCESS || extension_result == VK_INCOMPLETE) {
+                            appendf(report, capacity, "设备%d 扩展数量: %u（VkResult=%d）\n", index, extension_count, extension_result);
+                        } else {
+                            appendf(report, capacity, "设备%d 扩展枚举失败（VkResult=%d）\n", index, extension_result);
+                        }
                     }
                 }
             }
@@ -437,86 +492,89 @@ static const char *compiled_abi(void) {
 JNIEXPORT jstring JNICALL
 Java_com_deviceprobe_inspector_NativeBridge_collectVulkanData(JNIEnv *env, jclass clazz) {
     (void) clazz;
-    char report[REPORT_CAPACITY];
-    report[0] = '\0';
-    append_vulkan_report(report, sizeof(report));
-    return (*env)->NewStringUTF(env, report);
+    char *report = (char *) calloc(1, REPORT_CAPACITY);
+    if (report == NULL) return (*env)->NewStringUTF(env, "Vulkan 原生报告：内存分配失败");
+    append_vulkan_report(report, REPORT_CAPACITY);
+    jstring result = (*env)->NewStringUTF(env, report);
+    free(report);
+    return result;
 }
 
 JNIEXPORT jstring JNICALL
 Java_com_deviceprobe_inspector_NativeBridge_collectNativeData(JNIEnv *env, jclass clazz) {
     (void) clazz;
-    char report[REPORT_CAPACITY];
+    char *report = (char *) calloc(1, REPORT_CAPACITY);
+    if (report == NULL) return (*env)->NewStringUTF(env, "NDK 原生报告：内存分配失败");
     char number[128];
     char value[READ_CAPACITY];
-    report[0] = '\0';
-
-    appendf(report, sizeof(report), "[NDK / 内核公开接口]\n");
-    append_key_value(report, sizeof(report), "native ABI", compiled_abi());
+    appendf(report, REPORT_CAPACITY, "[NDK / 内核公开接口]\n");
+    append_key_value(report, REPORT_CAPACITY, "native ABI", compiled_abi());
 
     struct utsname kernel;
     if (uname(&kernel) == 0) {
-        append_key_value(report, sizeof(report), "uname.sysname", kernel.sysname);
-        append_key_value(report, sizeof(report), "uname.release", kernel.release);
-        append_key_value(report, sizeof(report), "uname.version", kernel.version);
-        append_key_value(report, sizeof(report), "uname.machine", kernel.machine);
+        append_key_value(report, REPORT_CAPACITY, "uname.sysname", kernel.sysname);
+        append_key_value(report, REPORT_CAPACITY, "uname.release", kernel.release);
+        append_key_value(report, REPORT_CAPACITY, "uname.version", kernel.version);
+        append_key_value(report, REPORT_CAPACITY, "uname.machine", kernel.machine);
     } else {
-        appendf(report, sizeof(report), "uname: 失败: %s\n", strerror(errno));
+        appendf(report, REPORT_CAPACITY, "uname: 失败: %s\n", strerror(errno));
     }
 
     long page_size = sysconf(_SC_PAGESIZE);
     long online_cpus = sysconf(_SC_NPROCESSORS_ONLN);
     long configured_cpus = sysconf(_SC_NPROCESSORS_CONF);
     snprintf(number, sizeof(number), "%ld bytes", page_size);
-    append_key_value(report, sizeof(report), "POSIX 页大小", number);
+    append_key_value(report, REPORT_CAPACITY, "POSIX 页大小", number);
     snprintf(number, sizeof(number), "%ld", online_cpus);
-    append_key_value(report, sizeof(report), "POSIX 在线逻辑 CPU", number);
+    append_key_value(report, REPORT_CAPACITY, "POSIX 在线逻辑 CPU", number);
     snprintf(number, sizeof(number), "%ld", configured_cpus);
-    append_key_value(report, sizeof(report), "POSIX 配置逻辑 CPU", number);
+    append_key_value(report, REPORT_CAPACITY, "POSIX 配置逻辑 CPU", number);
     snprintf(number, sizeof(number), "%lu", (unsigned long) getuid());
-    append_key_value(report, sizeof(report), "应用 Linux UID", number);
+    append_key_value(report, REPORT_CAPACITY, "应用 Linux UID", number);
 
     if (read_text_file("/sys/devices/system/cpu/present", value, sizeof(value)) == 0) {
-        append_key_value(report, sizeof(report), "/sys CPU present", value);
+        append_key_value(report, REPORT_CAPACITY, "/sys CPU present", value);
     } else {
-        appendf(report, sizeof(report), "/sys CPU present: 不可读: %s\n", strerror(errno));
+        appendf(report, REPORT_CAPACITY, "/sys CPU present: 不可读: %s\n", strerror(errno));
     }
     if (read_text_file("/sys/devices/system/cpu/online", value, sizeof(value)) == 0) {
-        append_key_value(report, sizeof(report), "/sys CPU online", value);
+        append_key_value(report, REPORT_CAPACITY, "/sys CPU online", value);
     } else {
-        appendf(report, sizeof(report), "/sys CPU online: 不可读: %s\n", strerror(errno));
+        appendf(report, REPORT_CAPACITY, "/sys CPU online: 不可读: %s\n", strerror(errno));
     }
-    append_cpu_detail_report(report, sizeof(report));
+    append_cpu_detail_report(report, REPORT_CAPACITY);
 
     if (read_text_file("/sys/fs/selinux/enforce", value, sizeof(value)) == 0) {
-        append_key_value(report, sizeof(report), "SELinux enforce", strcmp(value, "1") == 0 ? "enforcing (1)" : "permissive (0)");
+        append_key_value(report, REPORT_CAPACITY, "SELinux enforce", strcmp(value, "1") == 0 ? "enforcing (1)" : "permissive (0)");
     } else {
-        appendf(report, sizeof(report), "SELinux enforce: 不可读: %s\n", strerror(errno));
+        appendf(report, REPORT_CAPACITY, "SELinux enforce: 不可读: %s\n", strerror(errno));
     }
 
-    appendf(report, sizeof(report), "\n[内核导出原文；仅展示公开可读内容]\n");
-    append_text_source(report, sizeof(report), "/proc/version", 2048);
-    append_text_source(report, sizeof(report), "/proc/cpuinfo", 6144);
-    append_text_source(report, sizeof(report), "/proc/meminfo", 6144);
+    appendf(report, REPORT_CAPACITY, "\n[内核导出原文；仅展示公开可读内容]\n");
+    append_text_source(report, REPORT_CAPACITY, "/proc/version", 2048);
+    append_text_source(report, REPORT_CAPACITY, "/proc/cpuinfo", 6144);
+    append_text_source(report, REPORT_CAPACITY, "/proc/meminfo", 6144);
 
-    appendf(report, sizeof(report), "\n[显示内核候选节点]\n");
-    appendf(report, sizeof(report), "以下只是常见只读候选路径；面板供应商/型号没有 Android 通用公开路径。\n");
-    append_text_source(report, sizeof(report), "/sys/class/graphics/fb0/name", 512);
-    append_text_source(report, sizeof(report), "/sys/class/graphics/fb0/virtual_size", 512);
-    append_text_source(report, sizeof(report), "/sys/class/graphics/fb0/modes", 1024);
-    append_text_source(report, sizeof(report), "/sys/class/drm/card0-DSI-1/modes", 1024);
-    append_binary_hex_source(report, sizeof(report), "/sys/class/drm/card0-DSI-1/edid", 128);
+    appendf(report, REPORT_CAPACITY, "\n[显示内核候选节点]\n");
+    appendf(report, REPORT_CAPACITY, "以下只是常见只读候选路径；面板供应商/型号没有 Android 通用公开路径。\n");
+    append_text_source(report, REPORT_CAPACITY, "/sys/class/graphics/fb0/name", 512);
+    append_text_source(report, REPORT_CAPACITY, "/sys/class/graphics/fb0/virtual_size", 512);
+    append_text_source(report, REPORT_CAPACITY, "/sys/class/graphics/fb0/modes", 1024);
+    append_text_source(report, REPORT_CAPACITY, "/sys/class/drm/card0-DSI-1/modes", 1024);
+    append_binary_hex_source(report, REPORT_CAPACITY, "/sys/class/drm/card0-DSI-1/edid", 256);
 
-    append_memory_vendor_report(report, sizeof(report));
-    append_ddr_type_report(report, sizeof(report));
+    append_memory_vendor_report(report, REPORT_CAPACITY);
+    append_ddr_type_report(report, REPORT_CAPACITY);
 
-    appendf(report, sizeof(report), "\n[电池 power_supply 原始节点]\n");
-    appendf(report, sizeof(report), "字段由电池驱动/fuel-gauge 实际暴露；单位与可读性按原始节点保留。\n");
-    append_power_supply_report(report, sizeof(report));
+    appendf(report, REPORT_CAPACITY, "\n[电池 power_supply 原始节点]\n");
+    appendf(report, REPORT_CAPACITY, "字段由电池驱动/fuel-gauge 实际暴露；单位与可读性按原始节点保留。\n");
+    append_power_supply_report(report, REPORT_CAPACITY);
 
-    appendf(report, sizeof(report), "\n[数据边界]\n"
+    appendf(report, REPORT_CAPACITY, "\n[数据边界]\n"
             "本节由 C/NDK 使用 POSIX 与只读 /proc、/sys 接口获取。"
             "无法读取的节点按实际错误显示；应用没有 root 权限，未执行提权、绕过 SELinux 或访问受限系统服务。"
             "屏幕面板供应商、内存颗粒信息和电池健康百分比若未由设备公开，均不作猜测。\n");
-    return (*env)->NewStringUTF(env, report);
+    jstring result = (*env)->NewStringUTF(env, report);
+    free(report);
+    return result;
 }

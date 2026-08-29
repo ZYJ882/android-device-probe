@@ -1,6 +1,7 @@
 package com.deviceprobe.inspector;
 
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -15,7 +16,11 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.view.Display;
 import android.view.Gravity;
+import android.view.ViewConfiguration;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -25,8 +30,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Locale;
 
 /**
@@ -67,6 +70,9 @@ public final class ScreenTestActivity extends Activity {
     private PatternView patternView;
     private TextView titleView;
     private TextView hintView;
+    private LinearLayout topPanel;
+    private LinearLayout bottomPanel;
+    private Runnable longPressExit;
     private int patternIndex;
     private int solidIndex;
     private Bitmap officialP3Bitmap;
@@ -82,8 +88,12 @@ public final class ScreenTestActivity extends Activity {
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(DARK);
+        root.setKeepScreenOn(true);
         patternView = new PatternView();
         patternView.setLongClickable(true);
+        longPressExit = () -> {
+            if (profile.isWatch()) patternView.performLongClick();
+        };
         patternView.setOnLongClickListener(v -> {
             if (profile.isWatch()) {
                 finish();
@@ -92,8 +102,11 @@ public final class ScreenTestActivity extends Activity {
             return false;
         });
         root.addView(patternView, new FrameLayout.LayoutParams(-1, -1));
-        root.addView(createTopPanel(), new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
-        root.addView(createBottomPanel(), new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        topPanel = (LinearLayout) createTopPanel();
+        bottomPanel = (LinearLayout) createBottomPanel();
+        root.addView(topPanel, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
+        root.addView(bottomPanel, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
+        installInsets(root);
         setContentView(root);
         loadOfficialP3Bitmap();
         configureWideColorModeForPattern();
@@ -105,16 +118,52 @@ public final class ScreenTestActivity extends Activity {
         enterImmersive();
     }
 
+    @Override protected void onDestroy() {
+        if (officialP3Bitmap != null && !officialP3Bitmap.isRecycled()) {
+            officialP3Bitmap.recycle();
+            officialP3Bitmap = null;
+        }
+        if (patternView != null) patternView.removeCallbacks(longPressExit);
+        super.onDestroy();
+    }
+
     @Override public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) enterImmersive();
     }
 
     private void enterImmersive() {
-        getWindow().getDecorView().setSystemUiVisibility(
-                View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        if (Build.VERSION.SDK_INT >= 30) {
+            getWindow().setDecorFitsSystemWindows(false);
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.hide(WindowInsets.Type.systemBars());
+                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            }
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+        }
+    }
+
+    private void installInsets(FrameLayout root) {
+        if (Build.VERSION.SDK_INT < 23) return;
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            int top = 0;
+            int bottom = 0;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                top = bars.top;
+                bottom = bars.bottom;
+            }
+            int horizontalTop = profile.isWatch() ? dp(7) : (profile.isTelevision() ? dp(22) : dp(14));
+            int horizontalBottom = profile.isWatch() ? dp(5) : (profile.isTelevision() ? dp(22) : dp(10));
+            topPanel.setPadding(horizontalTop, (profile.isWatch() ? dp(5) : dp(8)) + top, horizontalTop, profile.isWatch() ? dp(5) : dp(8));
+            bottomPanel.setPadding(horizontalBottom, profile.isWatch() ? dp(4) : dp(7), horizontalBottom, (profile.isWatch() ? dp(4) : dp(7)) + bottom);
+            return insets;
+        });
     }
 
     private View createTopPanel() {
@@ -216,14 +265,9 @@ public final class ScreenTestActivity extends Activity {
             return;
         }
         try {
-            Class<?> activityInfo = Class.forName("android.content.pm.ActivityInfo");
-            Field requestedField = activityInfo.getField(requestWideColor
-                    ? "COLOR_MODE_WIDE_COLOR_GAMUT" : "COLOR_MODE_DEFAULT");
-            int requestedMode = requestedField.getInt(null);
-            Method setColorMode = Window.class.getMethod("setColorMode", int.class);
-            Method getColorMode = Window.class.getMethod("getColorMode");
-            setColorMode.invoke(getWindow(), requestedMode);
-            int grantedMode = ((Integer) getColorMode.invoke(getWindow())).intValue();
+            int requestedMode = requestWideColor ? ActivityInfo.COLOR_MODE_WIDE_COLOR_GAMUT : ActivityInfo.COLOR_MODE_DEFAULT;
+            getWindow().setColorMode(requestedMode);
+            int grantedMode = getWindow().getColorMode();
             boolean displayWide = isDisplayWideColorGamut();
             if (requestWideColor) {
                 wideColorModeStatus = displayWide && grantedMode == requestedMode
@@ -241,14 +285,8 @@ public final class ScreenTestActivity extends Activity {
     }
 
     private boolean isDisplayWideColorGamut() {
-        try {
-            Object display = getWindow().getDecorView().getDisplay();
-            if (display == null) return false;
-            Method wide = display.getClass().getMethod("isWideColorGamut");
-            return Boolean.TRUE.equals(wide.invoke(display));
-        } catch (Throwable ignored) {
-            return false;
-        }
+        Display display = getWindow().getDecorView().getDisplay();
+        return display != null && Build.VERSION.SDK_INT >= 26 && display.isWideColorGamut();
     }
 
     private void updateLabels() {
@@ -291,6 +329,7 @@ public final class ScreenTestActivity extends Activity {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path touchPath = new Path();
         private boolean hasTouch;
+        private int activePointerId = MotionEvent.INVALID_POINTER_ID;
         private long phaseStart = SystemClock.uptimeMillis();
 
         PatternView() {
@@ -302,6 +341,7 @@ public final class ScreenTestActivity extends Activity {
         void reset() {
             touchPath.reset();
             hasTouch = false;
+            activePointerId = MotionEvent.INVALID_POINTER_ID;
             phaseStart = SystemClock.uptimeMillis();
             invalidate();
         }
@@ -331,7 +371,18 @@ public final class ScreenTestActivity extends Activity {
                 case 12: gamutDetection(canvas, elapsed); break;
                 default: officialP3Robot(canvas); break;
             }
-            if (patternIndex == 7 || patternIndex == 8 || patternIndex == 9 || patternIndex == 12) postInvalidateDelayed(16);
+            long delay = animationDelay();
+            if (delay > 0) postInvalidateDelayed(delay);
+        }
+
+        private long animationDelay() {
+            switch (patternIndex) {
+                case 7: return 120L;
+                case 8: return 16L;
+                case 9: return 100L;
+                case 12: return 1400L;
+                default: return 0L;
+            }
         }
 
         private void solid(Canvas c) {
@@ -570,19 +621,42 @@ public final class ScreenTestActivity extends Activity {
         }
 
         @Override public boolean onTouchEvent(MotionEvent event) {
-            float x = event.getX(), y = event.getY();
+            final int action = event.getActionMasked();
+            if (profile.isWatch()) {
+                if (action == MotionEvent.ACTION_DOWN) {
+                    postDelayed(longPressExit, ViewConfiguration.getLongPressTimeout());
+                } else {
+                    removeCallbacks(longPressExit);
+                }
+            }
             if (patternIndex == 4) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                if (action == MotionEvent.ACTION_DOWN) {
+                    activePointerId = event.getPointerId(0);
                     touchPath.reset();
-                    touchPath.moveTo(x, y);
+                    touchPath.moveTo(event.getX(0), event.getY(0));
                     hasTouch = true;
-                } else if (event.getAction() == MotionEvent.ACTION_MOVE || event.getAction() == MotionEvent.ACTION_UP) {
-                    touchPath.lineTo(x, y);
+                } else if (action == MotionEvent.ACTION_POINTER_DOWN) {
+                    if (activePointerId == MotionEvent.INVALID_POINTER_ID) {
+                        int index = event.getActionIndex();
+                        activePointerId = event.getPointerId(index);
+                        touchPath.moveTo(event.getX(index), event.getY(index));
+                    }
+                } else if (action == MotionEvent.ACTION_MOVE) {
+                    int index = event.findPointerIndex(activePointerId);
+                    if (index >= 0) touchPath.lineTo(event.getX(index), event.getY(index));
+                } else if (action == MotionEvent.ACTION_POINTER_UP || action == MotionEvent.ACTION_UP) {
+                    int index = event.findPointerIndex(activePointerId);
+                    if (index >= 0) touchPath.lineTo(event.getX(index), event.getY(index));
+                    if (action == MotionEvent.ACTION_UP || event.getPointerId(event.getActionIndex()) == activePointerId) {
+                        activePointerId = MotionEvent.INVALID_POINTER_ID;
+                    }
+                } else if (action == MotionEvent.ACTION_CANCEL) {
+                    activePointerId = MotionEvent.INVALID_POINTER_ID;
                 }
                 invalidate();
                 return true;
             }
-            if (patternIndex == 0 && event.getAction() == MotionEvent.ACTION_UP) {
+            if (patternIndex == 0 && action == MotionEvent.ACTION_UP) {
                 solidIndex = (solidIndex + 1) % 5;
                 invalidate();
                 performClick();

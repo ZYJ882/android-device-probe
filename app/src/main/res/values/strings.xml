@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="icon_background">#09101D</color>
     <string name="app_name">设备信息探查器</string>
+    <string name="screen_test_title">屏幕测试</string>
 </resources>

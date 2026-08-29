@@ -81,6 +81,7 @@ public final class MainActivity extends android.app.Activity {
     private final ExecutorService probeExecutor = Executors.newSingleThreadExecutor();
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private boolean refreshing;
+    private volatile boolean destroyed;
     private String fullReport = "";
     private String latestNativeResult = "";
     private String latestGpuResult = "";
@@ -159,6 +160,8 @@ public final class MainActivity extends android.app.Activity {
     }
 
     @Override protected void onDestroy() {
+        destroyed = true;
+        uiHandler.removeCallbacksAndMessages(null);
         probeExecutor.shutdownNow();
         super.onDestroy();
     }
@@ -837,7 +840,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void refreshProbe() {
-        if (refreshing) return;
+        if (destroyed || refreshing) return;
         refreshing = true;
         if (refreshButton != null) {
             refreshButton.setEnabled(false);
@@ -870,13 +873,16 @@ public final class MainActivity extends android.app.Activity {
                         deviceSummary, performanceSummary, graphicsSummary, memorySummary, batterySummary,
                         displaySummary, technicalRaw, copyReport);
                 uiHandler.post(() -> applySnapshot(snapshot));
-            } catch (Throwable error) {
-                uiHandler.post(() -> finishRefreshWithError(error));
+            } catch (Exception error) {
+                uiHandler.post(() -> {
+                    if (!destroyed) finishRefreshWithError(error);
+                });
             }
         });
     }
 
     private void applySnapshot(ProbeSnapshot snapshot) {
+        if (destroyed || isFinishing()) return;
         latestNativeResult = snapshot.nativeResult;
         latestGpuResult = snapshot.gpuResult;
         latestVulkanResult = snapshot.vulkanResult;
@@ -900,13 +906,14 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private void finishRefreshWithError(Throwable error) {
+        if (destroyed || isFinishing()) return;
         refreshing = false;
         if (refreshButton != null) {
             refreshButton.setEnabled(true);
             refreshButton.setText("刷新");
         }
         statusView.setText("检测未完成 · " + error.getClass().getSimpleName());
-        Toast.makeText(this, "设备信息读取未完成，请稍后重试", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), "设备信息读取未完成，请稍后重试", Toast.LENGTH_SHORT).show();
     }
 
     private void showSearchDialog() {
@@ -929,7 +936,7 @@ public final class MainActivity extends android.app.Activity {
     private void searchSections(String query) {
         String normalized = query == null ? "" : query.trim().toLowerCase(Locale.US);
         if (normalized.isEmpty()) {
-            Toast.makeText(this, "请输入要搜索的内容", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "请输入要搜索的内容", Toast.LENGTH_SHORT).show();
             return;
         }
         SectionCard first = null;
@@ -943,7 +950,7 @@ public final class MainActivity extends android.app.Activity {
             if (first == null) first = card;
         }
         if (first == null) {
-            Toast.makeText(this, "未在当前已采集数据中找到“" + query.trim() + "”", Toast.LENGTH_LONG).show();
+            Toast.makeText(getApplicationContext(), "未在当前已采集数据中找到“" + query.trim() + "”", Toast.LENGTH_LONG).show();
             return;
         }
         final SectionCard target = first;
@@ -954,7 +961,7 @@ public final class MainActivity extends android.app.Activity {
             rootScroll.getLocationOnScreen(origin);
             rootScroll.smoothScrollBy(0, targetLocation[1] - origin[1] - dp(12));
         });
-        Toast.makeText(this, "找到 " + count + " 个相关模块；已展开第一个结果", Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(), "找到 " + count + " 个相关模块；已展开第一个结果", Toast.LENGTH_SHORT).show();
     }
 
     private void clearSearchHighlight() {
@@ -963,7 +970,7 @@ public final class MainActivity extends android.app.Activity {
 
     private void showReportMenu() {
         if (TextUtils.isEmpty(fullReport)) {
-            Toast.makeText(this, "正在读取信息，请稍候", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "正在读取信息，请稍候", Toast.LENGTH_SHORT).show();
             return;
         }
         final String[] actions = {"复制全部信息", "分享设备报告", "导出 TXT", "导出结构化 JSON", "清除搜索高亮"};
@@ -999,6 +1006,7 @@ public final class MainActivity extends android.app.Activity {
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (destroyed) return;
         if ((requestCode != EXPORT_TEXT && requestCode != EXPORT_JSON) || resultCode != RESULT_OK || data == null || data.getData() == null) return;
         final int exportType = requestCode;
         final android.net.Uri destination = data.getData();
@@ -1006,14 +1014,19 @@ public final class MainActivity extends android.app.Activity {
         probeExecutor.execute(() -> {
             try {
                 String payload = exportType == EXPORT_JSON ? buildStructuredJsonReport() : textSnapshot;
-                OutputStream stream = getContentResolver().openOutputStream(destination);
-                if (stream == null) throw new IllegalStateException("输出流不可用");
-                Writer writer = new OutputStreamWriter(stream, "UTF-8");
-                writer.write(payload);
-                writer.close();
-                uiHandler.post(() -> Toast.makeText(this, exportType == EXPORT_JSON ? "JSON 报告已导出" : "TXT 报告已导出", Toast.LENGTH_SHORT).show());
-            } catch (Throwable error) {
-                uiHandler.post(() -> Toast.makeText(this, "导出失败：" + error.getClass().getSimpleName(), Toast.LENGTH_LONG).show());
+                try (OutputStream stream = getContentResolver().openOutputStream(destination)) {
+                    if (stream == null) throw new IllegalStateException("输出流不可用");
+                    try (Writer writer = new OutputStreamWriter(stream, "UTF-8")) {
+                        writer.write(payload);
+                    }
+                }
+                uiHandler.post(() -> {
+                    if (!destroyed) Toast.makeText(getApplicationContext(), exportType == EXPORT_JSON ? "JSON 报告已导出" : "TXT 报告已导出", Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception error) {
+                uiHandler.post(() -> {
+                    if (!destroyed) Toast.makeText(getApplicationContext(), "导出失败：" + error.getClass().getSimpleName(), Toast.LENGTH_LONG).show();
+                });
             }
         });
     }
@@ -1120,7 +1133,7 @@ public final class MainActivity extends android.app.Activity {
 
     private static String sourceFor(String key, String value, String fallback) {
         String combined = key + " " + value;
-        if (isCameraField(key) || combined.contains("Camera2") || combined.contains("cameraId")) return "Camera2 metadata";
+        if ((isCameraField(key) && !key.contains("HDR")) || combined.contains("Camera2") || combined.contains("cameraId")) return "Camera2 metadata";
         if (combined.contains("OpenGL") || combined.contains("GL_")) return "OpenGL ES Driver";
         if (combined.contains("Vulkan")) return "Vulkan Driver / Android Framework";
         if (combined.contains("power_supply") || combined.contains("电量计")) return "Battery power_supply";
@@ -1135,7 +1148,7 @@ public final class MainActivity extends android.app.Activity {
         if (combined.contains("系统报告") || combined.contains("系统声明")) return "system_reported";
         if (combined.contains("驱动")) return "driver_reported";
         if (combined.contains("内核") || combined.contains("power_supply")) return "kernel_reported";
-        if (isCameraField(key) || combined.contains("Camera2")) return "camera2_reported";
+        if ((isCameraField(key) && !key.contains("HDR")) || combined.contains("Camera2")) return "camera2_reported";
         return fallback;
     }
 
@@ -1283,7 +1296,7 @@ public final class MainActivity extends android.app.Activity {
         append(out, "GPU", gpuValue(gpuResult, "GL_RENDERER"));
         append(out, "GPU 厂商", gpuValue(gpuResult, "GL_VENDOR"));
         append(out, "图形接口", gpuValue(gpuResult, "GL_VERSION"));
-        append(out, "设备首选 ABI", safe(Build.CPU_ABI));
+        append(out, "设备首选 ABI", Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "系统未公开");
         append(out, "设备支持 ABI", join(Build.SUPPORTED_ABIS));
         append(out, "应用支持 ABI", appSupportedAbis());
         append(out, "应用正在使用", nativeValue(nativeResult, "native ABI"));
@@ -1613,12 +1626,8 @@ public final class MainActivity extends android.app.Activity {
         if (Build.VERSION.SDK_INT < 26) {
             return "系统未提供公开检测（需 API 26+；当前 API " + Build.VERSION.SDK_INT + "）";
         }
-        try {
-            Object supported = Display.class.getMethod("isWideColorGamut").invoke(display);
-            return Boolean.TRUE.equals(supported) ? "系统报告支持广色域（Wide Color Gamut）" : "系统报告不支持广色域";
-        } catch (Throwable error) {
-            return "不可读取: " + error.getClass().getSimpleName();
-        }
+        return display != null && display.isWideColorGamut()
+                ? "系统报告支持广色域（Wide Color Gamut）" : "系统报告不支持广色域";
     }
 
     private static String tenBitCapabilityCompat(Display display) {
@@ -1633,26 +1642,22 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private static String hdrTypesCompat(Display display) {
-        try {
-            Object capabilities = Display.class.getMethod("getHdrCapabilities").invoke(display);
-            if (capabilities == null) return "系统未报告 HDR 支持";
-            int[] types = (int[]) capabilities.getClass().getMethod("getSupportedHdrTypes").invoke(capabilities);
-            if (types == null || types.length == 0) return "系统未报告 HDR 支持";
-            StringBuilder out = new StringBuilder();
-            for (int index = 0; index < types.length; index++) {
-                if (index > 0) out.append(", ");
-                switch (types[index]) {
-                    case 1: out.append("Dolby Vision"); break;
-                    case 2: out.append("HDR10"); break;
-                    case 3: out.append("HLG"); break;
-                    case 4: out.append("HDR10+"); break;
-                    default: out.append("类型 ").append(types[index]); break;
-                }
+        if (display == null || Build.VERSION.SDK_INT < 24) return "系统未报告 HDR 支持";
+        android.view.Display.HdrCapabilities capabilities = display.getHdrCapabilities();
+        int[] types = capabilities == null ? null : capabilities.getSupportedHdrTypes();
+        if (types == null || types.length == 0) return "系统未报告 HDR 支持";
+        StringBuilder out = new StringBuilder();
+        for (int index = 0; index < types.length; index++) {
+            if (index > 0) out.append(", ");
+            switch (types[index]) {
+                case 1: out.append("Dolby Vision"); break;
+                case 2: out.append("HDR10"); break;
+                case 3: out.append("HLG"); break;
+                case 4: out.append("HDR10+"); break;
+                default: out.append("类型 ").append(types[index]); break;
             }
-            return out.toString();
-        } catch (Throwable error) {
-            return "不可读取: " + error.getClass().getSimpleName();
         }
+        return out.toString();
     }
 
     private static String displayStateName(int state) {
@@ -1748,7 +1753,11 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private Intent batteryIntent() {
-        return registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        if (Build.VERSION.SDK_INT >= 33) {
+            return registerReceiver(null, filter, Context.RECEIVER_NOT_EXPORTED);
+        }
+        return registerReceiver(null, filter);
     }
 
     private static String batteryPercent(Intent intent) {
@@ -1762,9 +1771,9 @@ public final class MainActivity extends android.app.Activity {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (clipboard != null) {
             clipboard.setPrimaryClip(ClipData.newPlainText("Device Probe Report", fullReport));
-            Toast.makeText(this, "全部报告已复制到剪贴板", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "全部报告已复制到剪贴板", Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "剪贴板服务不可用", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "剪贴板服务不可用", Toast.LENGTH_SHORT).show();
         }
     }
 

@@ -11,8 +11,8 @@ android {
         applicationId 'com.deviceprobe.inspector'
         minSdk 21
         targetSdk 35
-        versionCode 19
-        versionName '1.18.0'
+        versionCode 20
+        versionName '1.19.0'
 
         externalNativeBuild {
             cmake {
@@ -21,7 +21,7 @@ android {
         }
 
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
         }
     }
 
@@ -29,9 +29,27 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        release {
+            def releaseStore = providers.gradleProperty('DEVICE_PROBE_RELEASE_STORE_FILE').orNull
+            def releaseStorePassword = providers.gradleProperty('DEVICE_PROBE_RELEASE_STORE_PASSWORD').orNull
+            def releaseKeyAlias = providers.gradleProperty('DEVICE_PROBE_RELEASE_KEY_ALIAS').orNull
+            def releaseKeyPassword = providers.gradleProperty('DEVICE_PROBE_RELEASE_KEY_PASSWORD').orNull
+            if (releaseStore && releaseStorePassword && releaseKeyAlias && releaseKeyPassword && file(releaseStore).exists()) {
+                storeFile file(releaseStore)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release.storeFile != null ? signingConfigs.release : signingConfigs.debug
         }
     }
 

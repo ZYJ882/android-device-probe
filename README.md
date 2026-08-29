@@ -12,7 +12,7 @@
 | 不猜测 | 未公开、受 SELinux 限制、无法在普通应用权限下确认的信息，会显示“设备未公开”“不可读取”或“无法可靠确认”。 |
 | 数据可追溯 | 常规信息标记为系统报告、驱动报告、内核公开值、估算或无法确认；完整原文集中于“技术原始数据”。 |
 | 本地优先 | 不使用云端机型数据库，不采集账户、通讯录、位置、序列号、IMEI、广告标识符或外部存储内容。 |
-| 兼容优先 | 最低 API 21。对 API 24+ Vulkan、API 26+ 广色域等能力使用运行时判断或反射回退，旧系统只显示实际不可用状态。 |
+| 兼容优先 | 最低 API 21。对 API 24+ 动态传感器、API 26+ 广色域、API 28+ 逻辑多摄像头和 API 30+ 边到边窗口使用运行时 SDK 守卫，旧系统只显示实际不可用状态。 |
 
 > C/NDK 能读取的是 Android 向沙箱内普通应用暴露的内核接口；它不获得 root 权限，也不能绕过 SELinux。因此，“真实”来自明确的数据来源和权限边界，而不只是使用 C 语言。[1] [2]
 
@@ -25,8 +25,8 @@
 | GPU 与图形 API | OpenGL ES 厂商、渲染器、版本、GLSL、扩展数量；Vulkan loader、实例 API、物理设备、驱动和扩展 | 实际 EGL/OpenGL ES 上下文、C/NDK 动态加载 Vulkan |
 | 内存与存储 | 总内存、可用内存、使用比例、存储总量/可用量、DDR 公开字段与内存硬件名称候选 | `ActivityManager`、`StatFs`、`/proc/meminfo`、公开 `/sys` |
 | 电池 | 电量、状态、健康枚举、温度、电压、外接电源、公开的厂商/型号与条件式健康度估算 | `ACTION_BATTERY_CHANGED`、`BatteryManager`、`/sys/class/power_supply` |
-| 屏幕 | 分辨率、密度、尺寸估算、刷新率、系统广色域/HDR 报告、10-bit 公开边界 | `Display`、`DisplayManager`、公开显示节点 |
-| 硬件能力 | 摄像头存在声明、Camera2 前/后/外置方向、四层摄像头详情、照片/视频尺寸、MP、焦距、光圈、对焦、ISO、曝光、OIS/EIS、RAW、HDR、逻辑/物理摄像头与传感器能力 | `PackageManager`、Camera2、`SensorManager` |
+| 屏幕 | 分辨率、密度、尺寸估算、刷新率、系统广色域/HDR 报告、10-bit 公开边界、EDID 可读前 256 字节 | `Display`、`DisplayManager`、公开显示节点、DRM/sysfs |
+| 硬件能力 | 摄像头存在声明、Camera2 前/后/外置方向、四层摄像头详情、照片/视频尺寸、MP、焦距、光圈、对焦、ISO、曝光、OIS/EIS、RAW、HDR、逻辑/物理摄像头与静态/动态传感器能力 | `PackageManager`、Camera2、`SensorManager` |
 | 屏幕测试 | 14 项纯色、灰阶、对比度、饱和度、触控、几何、渐变、闪烁辅助、拖影、残影、色域、视角等测试，含官方 Display P3 红色机器人图 | Android Canvas、MotionEvent、官方 P3 PNG |
 
 ## 界面与操作
@@ -34,7 +34,7 @@
 首页使用设备 Hero 和 CPU、GPU、RAM、存储、屏幕、电池六项核心指标卡，避免将原始日志直接铺满首屏。常用操作包括：
 
 - **搜索**：在当前已采集的本地数据中查找关键词，自动展开并定位对应模块；可搜索 GPU、Vulkan、DDR、电池、相机和传感器字段。
-- **刷新**：在单线程后台重新读取 NDK、EGL/OpenGL ES、Vulkan、Camera2、传感器和 framework 数据；界面线程只更新采集完成后的快照，并防止重复刷新。
+- **刷新**：在单线程后台重新读取 NDK、EGL/OpenGL ES、Vulkan、Camera2、静态/动态传感器和 framework 数据；界面线程只更新采集完成后的不可变快照，并防止重复刷新；Activity 销毁后丢弃待回调结果。
 - **报告**：复制全部信息、调用系统分享、通过系统文件选择器导出 TXT，或导出包含 `device`、`system`、`cpu`、`gpu`、`display`、`memory`、`storage`、`battery`、`sensors`、`camera`、`vulkan` 与 `hardware` 分组的 JSON；每个事实字段包含 `value`、`source`、`confidence`。
 - **详细信息**：常规模块默认使用键值网格；内存/存储使用率和电池电量按本轮实际采集数值绘制轻量进度条，不生成性能评分；“技术原始数据”默认收起，集中保留内核节点、驱动原文和探测失败原因。
 - **来源说明**：点击任意来源/可信度标签，可查看该字段对应的 Android API、Camera2 metadata、OpenGL ES/Vulkan 驱动或 `/proc`、`/sys` 公开节点类别，以及相应的真实性边界。
@@ -74,7 +74,7 @@
 |---|---|
 | 最低系统版本 | Android 5.0 / API 21 |
 | 构建 SDK | compileSdk 35，targetSdk 35 |
-| 原生 ABI | `armeabi-v7a`、`arm64-v8a`、`x86`、`x86_64` |
+| 原生 ABI | `armeabi-v7a`、`arm64-v8a`、`x86_64`；已移除已废弃的 32 位 x86 |
 | 图形 API | OpenGL ES 实际上下文检测；Vulkan 通过动态 `libvulkan.so` 加载，旧系统无 loader 时安全显示不可用。 |
 | 设备形态 | 手机、平板、Android TV/Leanback、Wear OS 与部分未声明 Wear feature 的原生 Android 手表。 |
 | 权限 | 无 `uses-permission` 条目。 |
@@ -93,7 +93,7 @@
 
 ## 安装
 
-请从仓库的 **[Releases](https://github.com/ZYJ882/android-device-probe/releases)** 页面下载最新 APK。当前提供的测试包使用 Debug 签名；Android 5.0 通常需要允许“未知来源”，较新 Android 版本需要允许用于安装的文件管理器或浏览器“安装未知应用”。
+请从仓库的 **[Releases](https://github.com/ZYJ882/android-device-probe/releases)** 页面下载最新 APK。Release 页面提供经过 R8 压缩并签名的安装包；Android 5.0 通常需要允许“未知来源”，较新 Android 版本需要允许用于安装的文件管理器或浏览器“安装未知应用”。
 
 也可在已开启 USB 调试的设备上使用：
 
@@ -101,7 +101,7 @@
 adb install -r <downloaded-apk>.apk
 ```
 
-> Debug 签名仅适合测试安装。若要公开分发、长期维护或发布到应用商店，请使用您自己妥善保管的发布密钥生成 Release APK。
+> 仓库不包含任何私钥。若要长期维护或发布到应用商店，请使用自己妥善保管的发布密钥，并通过 Gradle 属性 `DEVICE_PROBE_RELEASE_STORE_FILE`、`DEVICE_PROBE_RELEASE_STORE_PASSWORD`、`DEVICE_PROBE_RELEASE_KEY_ALIAS` 和 `DEVICE_PROBE_RELEASE_KEY_PASSWORD` 配置 release 签名。未配置时构建脚本仅回退到 debug 签名，便于本地验证。
 
 ## 从源码构建
 
@@ -126,8 +126,14 @@ app/build/outputs/apk/debug/app-debug.apk
 建议在提交前执行完整验证：
 
 ```bash
-./gradlew clean assembleDebug lintDebug
+./gradlew clean assembleDebug assembleRelease lintDebug lintRelease
 ```
+
+## 工程安全与性能
+
+原生报告缓冲区使用堆内存并在 JNI 返回后释放；`/proc`、`/sys` 和 EDID 读取处理 EINTR/短读，并在报告达到上限时明确标记截断。屏幕测试使用 API 30+ `WindowInsetsController`，手表提供长按退出，触摸轨迹按 pointer ID 处理；导出使用 try-with-resources，Activity 销毁后不会继续更新已分离的 View。
+
+Release 默认启用 R8 和资源压缩。签名密钥只从仓库外的 Gradle 属性读取，避免私钥进入源码或版本历史。
 
 ## 项目结构
 

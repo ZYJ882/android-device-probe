@@ -12,6 +12,7 @@ import android.hardware.camera2.CameraMetadata;
 import android.media.MediaRecorder;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
+import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Range;
 import android.util.Size;
@@ -113,7 +114,8 @@ public final class CapabilityProbe {
         List<Sensor> sensors = sensorManager.getSensorList(Sensor.TYPE_ALL);
         out.append("系统枚举的传感器数量: ").append(sensors.size()).append("\n");
         if (sensors.isEmpty()) {
-            out.append("系统未报告传感器。\n");
+            out.append("系统未报告静态传感器。\n");
+            appendDynamicSensorSection(out, sensorManager);
             return;
         }
         int limit = Math.min(sensors.size(), 64);
@@ -127,6 +129,33 @@ public final class CapabilityProbe {
                     .append("；最小延迟: ").append(sensor.getMinDelay()).append(" µs\n");
         }
         if (sensors.size() > limit) out.append("另有 ").append(sensors.size() - limit).append(" 项未展开。\n");
+        appendDynamicSensorSection(out, sensorManager);
+    }
+
+    private static void appendDynamicSensorSection(StringBuilder out, SensorManager sensorManager) {
+        if (Build.VERSION.SDK_INT < 24) {
+            out.append("\n动态传感器: 需要 API 24+ 公开回调\n");
+            return;
+        }
+        final List<Sensor> dynamicSensors = new ArrayList<>();
+        SensorManager.DynamicSensorCallback callback = new SensorManager.DynamicSensorCallback() {
+            @Override public void onDynamicSensorConnected(Sensor sensor) {
+                if (sensor != null) dynamicSensors.add(sensor);
+            }
+        };
+        try {
+            sensorManager.registerDynamicSensorCallback(callback);
+            SystemClock.sleep(250L);
+            sensorManager.unregisterDynamicSensorCallback(callback);
+            out.append("\n动态传感器（API 24+ 回调窗口）: ").append(dynamicSensors.size()).append(" 个\n");
+            for (Sensor sensor : dynamicSensors) {
+                out.append("- ").append(typeName(sensor.getType())).append(" / ")
+                        .append(safe(sensor.getName())).append(" / ").append(safe(sensor.getVendor())).append("\n");
+            }
+        } catch (Throwable error) {
+            try { sensorManager.unregisterDynamicSensorCallback(callback); } catch (Throwable ignored) { }
+            out.append("\n动态传感器: 不可读取（").append(error.getClass().getSimpleName()).append("）\n");
+        }
     }
 
     private static void appendCameraMetadata(StringBuilder details, CameraCharacteristics c) {
@@ -389,15 +418,8 @@ public final class CapabilityProbe {
 
     private static String formatPhysicalIds(CameraCharacteristics c) {
         if (Build.VERSION.SDK_INT < 28) return "需要 API 28+ 公开字段";
-        try {
-            Object value = CameraCharacteristics.class.getMethod("getPhysicalCameraIds").invoke(c);
-            if (!(value instanceof Set)) return "系统未公开";
-            Set<?> ids = (Set<?>) value;
-            if (ids.isEmpty()) return "无（不是逻辑多摄像头或未公开）";
-            return ids.toString();
-        } catch (Throwable ignored) {
-            return "系统未公开或不可读取";
-        }
+        Set<String> ids = c.getPhysicalCameraIds();
+        return ids == null || ids.isEmpty() ? "无（不是逻辑多摄像头或未公开）" : ids.toString();
     }
 
     private static Size largestSize(Size[] sizes) {
@@ -440,13 +462,8 @@ public final class CapabilityProbe {
     }
 
     private static Integer reflectedLogicalMultiCameraCapability() {
-        if (Build.VERSION.SDK_INT < 28) return null;
-        try {
-            return (Integer) CameraCharacteristics.class
-                    .getField("REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA").get(null);
-        } catch (Throwable ignored) {
-            return null;
-        }
+        return Build.VERSION.SDK_INT < 28
+                ? null : CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA;
     }
 
     private static String facingName(Integer facing) {
