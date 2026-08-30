@@ -87,7 +87,7 @@ public final class CapabilityProbe {
                     Integer hardwareLevel = c.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL);
                     if (hardwareLevel != null) details.append("  Camera2 硬件级别: ").append(cameraLevel(hardwareLevel)).append("\n");
                     appendCameraMetadata(details, c);
-                } catch (Throwable error) {
+                } catch (RuntimeException error) {
                     unknown++;
                     details.append("cameraId ").append(id).append(": metadata 不可读取（")
                             .append(error.getClass().getSimpleName()).append("）\n");
@@ -152,8 +152,8 @@ public final class CapabilityProbe {
                 out.append("- ").append(typeName(sensor.getType())).append(" / ")
                         .append(safe(sensor.getName())).append(" / ").append(safe(sensor.getVendor())).append("\n");
             }
-        } catch (Throwable error) {
-            try { sensorManager.unregisterDynamicSensorCallback(callback); } catch (Throwable ignored) { }
+        } catch (RuntimeException error) {
+            try { sensorManager.unregisterDynamicSensorCallback(callback); } catch (RuntimeException ignored) { }
             out.append("\n动态传感器: 不可读取（").append(error.getClass().getSimpleName()).append("）\n");
         }
     }

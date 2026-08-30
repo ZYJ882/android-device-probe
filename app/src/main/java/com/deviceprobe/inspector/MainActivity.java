@@ -50,6 +50,10 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+
 /**
  * A modern, zero-permission Android 5.0+ device inspection UI.
  * Details are separated into expandable sections so long kernel text does not
@@ -168,6 +172,7 @@ public final class MainActivity extends android.app.Activity {
 
     private void configureSystemBars() {
         Window window = getWindow();
+        WindowCompat.setDecorFitsSystemWindows(window, false);
         window.setStatusBarColor(BACKGROUND);
         window.setNavigationBarColor(BACKGROUND);
     }
@@ -185,6 +190,14 @@ public final class MainActivity extends android.app.Activity {
         int verticalInset = deviceProfile.isWatch() ? dp(10) : dp(20);
         root.setPadding(horizontalInset, verticalInset, horizontalInset, deviceProfile.isWatch() ? dp(12) : dp(28));
         scroll.addView(root, new ScrollView.LayoutParams(match(), wrap()));
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(scroll, (view, insets) -> {
+            androidx.core.graphics.Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPadding(horizontalInset + bars.left, verticalInset + bars.top,
+                    horizontalInset + bars.right,
+                    (deviceProfile.isWatch() ? dp(12) : dp(28)) + bars.bottom);
+            return WindowInsetsCompat.CONSUMED;
+        });
+        androidx.core.view.ViewCompat.requestApplyInsets(scroll);
 
         root.addView(createTopBar());
         root.addView(createHeroCard(), marginParams(match(), wrap(), 0, deviceProfile.isWatch() ? dp(10) : dp(16), 0, 0));
@@ -1586,7 +1599,7 @@ public final class MainActivity extends android.app.Activity {
         try {
             DisplayManager displayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
             return displayManager == null ? null : displayManager.getDisplay(Display.DEFAULT_DISPLAY);
-        } catch (Throwable ignored) {
+        } catch (RuntimeException ignored) {
             return null;
         }
     }
@@ -1632,7 +1645,7 @@ public final class MainActivity extends android.app.Activity {
 
     private static String tenBitCapabilityCompat(Display display) {
         String hdr = hdrTypesCompat(display);
-        if (Build.VERSION.SDK_INT < 24) {
+        if (Build.VERSION.SDK_INT < 26) {
             return "系统未提供 HDR 类型公开检测；无面板原生 10-bit 通用 API";
         }
         if (hdr.startsWith("不可读取") || hdr.startsWith("系统未报告")) {
@@ -1642,7 +1655,7 @@ public final class MainActivity extends android.app.Activity {
     }
 
     private static String hdrTypesCompat(Display display) {
-        if (display == null || Build.VERSION.SDK_INT < 24) return "系统未报告 HDR 支持";
+        if (display == null || Build.VERSION.SDK_INT < 26) return "系统未报告 HDR 支持";
         android.view.Display.HdrCapabilities capabilities = display.getHdrCapabilities();
         int[] types = capabilities == null ? null : capabilities.getSupportedHdrTypes();
         if (types == null || types.length == 0) return "系统未报告 HDR 支持";
@@ -1754,10 +1767,7 @@ public final class MainActivity extends android.app.Activity {
 
     private Intent batteryIntent() {
         IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-        if (Build.VERSION.SDK_INT >= 33) {
-            return registerReceiver(null, filter, Context.RECEIVER_NOT_EXPORTED);
-        }
-        return registerReceiver(null, filter);
+        return ContextCompat.registerReceiver(this, null, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
 
     private static String batteryPercent(Intent intent) {

@@ -17,6 +17,13 @@
 #define REPORT_CAPACITY 65536
 #define READ_CAPACITY 8192
 
+static const char *safe_strerror(int errnum) {
+    static _Thread_local char buffer[128];
+    int rc = strerror_r(errnum, buffer, sizeof(buffer));
+    if (rc != 0) snprintf(buffer, sizeof(buffer), "errno=%d", errnum);
+    return buffer;
+}
+
 static void mark_report_truncated(char *report, size_t capacity) {
     static const char marker[] = "\n（报告已截断）\n";
     size_t marker_len = sizeof(marker) - 1;
@@ -97,7 +104,7 @@ static void append_text_source(char *report, size_t capacity, const char *path, 
         appendf(report, capacity, "\n-- %s%s --\n%s\n", path,
                 strlen(data) >= read_limit ? "（内容已截断）" : "", data);
     } else {
-        appendf(report, capacity, "\n-- %s --\n不可读: %s\n", path, strerror(errno));
+        appendf(report, capacity, "\n-- %s --\n不可读: %s\n", path, safe_strerror(errno));
     }
 }
 
@@ -106,14 +113,14 @@ static void append_binary_hex_source(char *report, size_t capacity, const char *
     if (read_limit > sizeof(data)) read_limit = sizeof(data);
     int fd = open(path, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
-        appendf(report, capacity, "\n-- %s --\n不可读: %s\n", path, strerror(errno));
+        appendf(report, capacity, "\n-- %s --\n不可读: %s\n", path, safe_strerror(errno));
         return;
     }
     ssize_t count = read_full(fd, data, read_limit);
     int saved_errno = errno;
     close(fd);
     if (count < 0) {
-        appendf(report, capacity, "\n-- %s --\n不可读: %s\n", path, strerror(saved_errno));
+        appendf(report, capacity, "\n-- %s --\n不可读: %s\n", path, safe_strerror(saved_errno));
         return;
     }
     appendf(report, capacity, "\n-- %s（二进制前 %zd 字节，十六进制） --\n", path, count);
@@ -144,7 +151,7 @@ static void append_power_supply_entry(char *report, size_t capacity, const char 
         if (read_text_file(path, value, sizeof(value)) == 0) {
             appendf(report, capacity, "%s: %s\n", fields[index], value);
         } else {
-            appendf(report, capacity, "%s: 不可读: %s\n", fields[index], strerror(errno));
+            appendf(report, capacity, "%s: 不可读: %s\n", fields[index], safe_strerror(errno));
         }
     }
 }
@@ -217,7 +224,7 @@ static bool contains_memory_type_token(const char *value) {
 static void append_devfreq_memory_candidates(char *report, size_t capacity) {
     DIR *directory = opendir("/sys/class/devfreq");
     if (directory == NULL) {
-        appendf(report, capacity, "devfreq 目录不可读: %s\n", strerror(errno));
+        appendf(report, capacity, "devfreq 目录不可读: %s\n", safe_strerror(errno));
         return;
     }
     bool found = false;
@@ -287,7 +294,7 @@ static void append_ddr_type_report(char *report, size_t capacity) {
 static void append_power_supply_report(char *report, size_t capacity) {
     DIR *directory = opendir("/sys/class/power_supply");
     if (directory == NULL) {
-        appendf(report, capacity, "目录不可读: /sys/class/power_supply: %s\n", strerror(errno));
+        appendf(report, capacity, "目录不可读: /sys/class/power_supply: %s\n", safe_strerror(errno));
         return;
     }
 
@@ -382,16 +389,19 @@ static const char *vulkan_device_type_name(VkPhysicalDeviceType type) {
 static void append_vulkan_report(char *report, size_t capacity) {
     appendf(report, capacity, "\n[Vulkan 原生驱动查询]\n");
     /* Load Vulkan dynamically: API 21 devices simply report no loader. */
+    dlerror();
     void *library = dlopen("libvulkan.so", RTLD_NOW | RTLD_LOCAL);
     if (library == NULL) {
         const char *loader_error = dlerror();
         appendf(report, capacity, "Vulkan loader: 不可用或未提供（%s）\n", loader_error ? loader_error : "未知错误");
         return;
     }
+    dlerror();
     PFN_vkGetInstanceProcAddr get_instance_proc_addr =
             (PFN_vkGetInstanceProcAddr) dlsym(library, "vkGetInstanceProcAddr");
-    if (get_instance_proc_addr == NULL) {
-        appendf(report, capacity, "Vulkan loader: 找到，但缺少 vkGetInstanceProcAddr\n");
+    const char *sym_error = dlerror();
+    if (get_instance_proc_addr == NULL || sym_error != NULL) {
+        appendf(report, capacity, "Vulkan loader: 找到，但缺少 vkGetInstanceProcAddr（%s）\n", sym_error ? sym_error : "未知错误");
         dlclose(library);
         return;
     }
@@ -414,10 +424,18 @@ static void append_vulkan_report(char *report, size_t capacity) {
         dlclose(library);
         return;
     }
-    VkApplicationInfo app_info = { VK_STRUCTURE_TYPE_APPLICATION_INFO, NULL,
-            "DeviceProbe", VK_MAKE_VERSION(1, 16, 0), "DeviceProbe", VK_MAKE_VERSION(1, 0, 0), api_version };
-    VkInstanceCreateInfo create_info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, NULL, 0,
-            &app_info, 0, NULL, 0, NULL };
+    VkApplicationInfo app_info = {
+            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+            .pApplicationName = "DeviceProbe",
+            .applicationVersion = VK_MAKE_VERSION(1, 20, 0),
+            .pEngineName = "DeviceProbe",
+            .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+            .apiVersion = api_version,
+    };
+    VkInstanceCreateInfo create_info = {
+            .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            .pApplicationInfo = &app_info,
+    };
     VkInstance instance = VK_NULL_HANDLE;
     VkResult create_result = create_instance(&create_info, NULL, &instance);
     if (create_result != VK_SUCCESS || instance == VK_NULL_HANDLE) {
@@ -517,7 +535,7 @@ Java_com_deviceprobe_inspector_NativeBridge_collectNativeData(JNIEnv *env, jclas
         append_key_value(report, REPORT_CAPACITY, "uname.version", kernel.version);
         append_key_value(report, REPORT_CAPACITY, "uname.machine", kernel.machine);
     } else {
-        appendf(report, REPORT_CAPACITY, "uname: 失败: %s\n", strerror(errno));
+        appendf(report, REPORT_CAPACITY, "uname: 失败: %s\n", safe_strerror(errno));
     }
 
     long page_size = sysconf(_SC_PAGESIZE);
@@ -535,19 +553,19 @@ Java_com_deviceprobe_inspector_NativeBridge_collectNativeData(JNIEnv *env, jclas
     if (read_text_file("/sys/devices/system/cpu/present", value, sizeof(value)) == 0) {
         append_key_value(report, REPORT_CAPACITY, "/sys CPU present", value);
     } else {
-        appendf(report, REPORT_CAPACITY, "/sys CPU present: 不可读: %s\n", strerror(errno));
+        appendf(report, REPORT_CAPACITY, "/sys CPU present: 不可读: %s\n", safe_strerror(errno));
     }
     if (read_text_file("/sys/devices/system/cpu/online", value, sizeof(value)) == 0) {
         append_key_value(report, REPORT_CAPACITY, "/sys CPU online", value);
     } else {
-        appendf(report, REPORT_CAPACITY, "/sys CPU online: 不可读: %s\n", strerror(errno));
+        appendf(report, REPORT_CAPACITY, "/sys CPU online: 不可读: %s\n", safe_strerror(errno));
     }
     append_cpu_detail_report(report, REPORT_CAPACITY);
 
     if (read_text_file("/sys/fs/selinux/enforce", value, sizeof(value)) == 0) {
         append_key_value(report, REPORT_CAPACITY, "SELinux enforce", strcmp(value, "1") == 0 ? "enforcing (1)" : "permissive (0)");
     } else {
-        appendf(report, REPORT_CAPACITY, "SELinux enforce: 不可读: %s\n", strerror(errno));
+        appendf(report, REPORT_CAPACITY, "SELinux enforce: 不可读: %s\n", safe_strerror(errno));
     }
 
     appendf(report, REPORT_CAPACITY, "\n[内核导出原文；仅展示公开可读内容]\n");

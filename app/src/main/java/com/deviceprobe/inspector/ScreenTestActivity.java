@@ -19,8 +19,9 @@ import android.os.SystemClock;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.ViewConfiguration;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -72,7 +73,6 @@ public final class ScreenTestActivity extends Activity {
     private TextView hintView;
     private LinearLayout topPanel;
     private LinearLayout bottomPanel;
-    private Runnable longPressExit;
     private int patternIndex;
     private int solidIndex;
     private Bitmap officialP3Bitmap;
@@ -83,17 +83,15 @@ public final class ScreenTestActivity extends Activity {
         super.onCreate(state);
         profile = DeviceProfile.detect(this);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        enterImmersive();
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        loadOfficialP3Bitmap();
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(DARK);
         root.setKeepScreenOn(true);
-        patternView = new PatternView();
+        patternView = new PatternView(this, profile, officialP3Bitmap);
         patternView.setLongClickable(true);
-        longPressExit = () -> {
-            if (profile.isWatch()) patternView.performLongClick();
-        };
         patternView.setOnLongClickListener(v -> {
             if (profile.isWatch()) {
                 finish();
@@ -108,14 +106,12 @@ public final class ScreenTestActivity extends Activity {
         root.addView(bottomPanel, new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM));
         installInsets(root);
         setContentView(root);
-        loadOfficialP3Bitmap();
         configureWideColorModeForPattern();
         updateLabels();
     }
 
     @Override protected void onResume() {
         super.onResume();
-        enterImmersive();
     }
 
     @Override protected void onDestroy() {
@@ -123,7 +119,9 @@ public final class ScreenTestActivity extends Activity {
             officialP3Bitmap.recycle();
             officialP3Bitmap = null;
         }
-        if (patternView != null) patternView.removeCallbacks(longPressExit);
+        if (patternView != null) {
+            patternView.cancelExitLongPress();
+        }
         super.onDestroy();
     }
 
@@ -133,37 +131,21 @@ public final class ScreenTestActivity extends Activity {
     }
 
     private void enterImmersive() {
-        if (Build.VERSION.SDK_INT >= 30) {
-            getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController controller = getWindow().getInsetsController();
-            if (controller != null) {
-                controller.hide(WindowInsets.Type.systemBars());
-                controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-            }
-        } else {
-            getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-        }
+        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        controller.hide(WindowInsetsCompat.Type.systemBars());
+        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
     }
 
     private void installInsets(FrameLayout root) {
-        if (Build.VERSION.SDK_INT < 23) return;
-        root.setOnApplyWindowInsetsListener((view, insets) -> {
-            int top = 0;
-            int bottom = 0;
-            if (Build.VERSION.SDK_INT >= 30) {
-                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
-                top = bars.top;
-                bottom = bars.bottom;
-            }
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+            androidx.core.graphics.Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             int horizontalTop = profile.isWatch() ? dp(7) : (profile.isTelevision() ? dp(22) : dp(14));
             int horizontalBottom = profile.isWatch() ? dp(5) : (profile.isTelevision() ? dp(22) : dp(10));
-            topPanel.setPadding(horizontalTop, (profile.isWatch() ? dp(5) : dp(8)) + top, horizontalTop, profile.isWatch() ? dp(5) : dp(8));
-            bottomPanel.setPadding(horizontalBottom, profile.isWatch() ? dp(4) : dp(7), horizontalBottom, (profile.isWatch() ? dp(4) : dp(7)) + bottom);
-            return insets;
+            topPanel.setPadding(horizontalTop, (profile.isWatch() ? dp(5) : dp(8)) + bars.top, horizontalTop, profile.isWatch() ? dp(5) : dp(8));
+            bottomPanel.setPadding(horizontalBottom, profile.isWatch() ? dp(4) : dp(7), horizontalBottom, (profile.isWatch() ? dp(4) : dp(7)) + bars.bottom);
+            return WindowInsetsCompat.CONSUMED;
         });
+        androidx.core.view.ViewCompat.requestApplyInsets(root);
     }
 
     private View createTopPanel() {
@@ -246,6 +228,7 @@ public final class ScreenTestActivity extends Activity {
     private void selectPattern(int index) {
         patternIndex = (index % NAMES.length + NAMES.length) % NAMES.length;
         configureWideColorModeForPattern();
+        patternView.updatePattern(patternIndex, solidIndex, wideColorModeStatus);
         patternView.reset();
         updateLabels();
     }
@@ -314,6 +297,7 @@ public final class ScreenTestActivity extends Activity {
             }
             if ((keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) && patternIndex == 0) {
                 solidIndex = (solidIndex + 1) % 5;
+                patternView.updatePattern(patternIndex, solidIndex, wideColorModeStatus);
                 patternView.invalidate();
                 return true;
             }
@@ -325,17 +309,36 @@ public final class ScreenTestActivity extends Activity {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
     }
 
-    private final class PatternView extends View {
+    private static final class PatternView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path touchPath = new Path();
+        private final DeviceProfile profile;
+        private final Bitmap officialP3Bitmap;
+        private final Runnable longPressExit = this::performLongClick;
         private boolean hasTouch;
         private int activePointerId = MotionEvent.INVALID_POINTER_ID;
         private long phaseStart = SystemClock.uptimeMillis();
+        private int patternIndex;
+        private int solidIndex;
+        private String wideColorModeStatus = "";
 
-        PatternView() {
-            super(ScreenTestActivity.this);
+        PatternView(android.content.Context context, DeviceProfile profile, Bitmap officialP3Bitmap) {
+            super(context);
+            this.profile = profile;
+            this.officialP3Bitmap = officialP3Bitmap;
             paint.setStrokeCap(Paint.Cap.ROUND);
             setFocusable(false);
+        }
+
+        void updatePattern(int patternIndex, int solidIndex, String wideColorModeStatus) {
+            this.patternIndex = patternIndex;
+            this.solidIndex = solidIndex;
+            this.wideColorModeStatus = wideColorModeStatus == null ? "" : wideColorModeStatus;
+        }
+
+        void cancelExitLongPress() {
+            removeCallbacks(longPressExit);
+            super.cancelLongPress();
         }
 
         void reset() {
@@ -350,6 +353,9 @@ public final class ScreenTestActivity extends Activity {
         private int bottom() { return getHeight() - (profile.isWatch() ? dp(48) : (profile.isTelevision() ? dp(72) : dp(62))); }
         private int contentHeight() { return Math.max(dp(40), bottom() - top()); }
         private float centerY() { return top() + contentHeight() / 2f; }
+        private int dp(float value) {
+            return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+        }
         private void text(float sp, int color) { paint.setTextSize(dp(sp)); paint.setColor(color); paint.setStyle(Paint.Style.FILL); }
 
         @Override protected void onDraw(Canvas canvas) {

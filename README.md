@@ -2,7 +2,7 @@
 
 > 面向 Android 5.0 及以上设备的本地硬件与系统信息查看工具。它优先显示**当前设备确实向普通应用公开的数据**，而不是根据型号或在线数据库猜测参数。
 
-应用以 Java 界面和 C/NDK 探测层组成，支持手机、平板、电视与手表布局。除用户主动使用系统分享或导出功能外，应用不访问网络、不上传探查结果，也不请求危险权限。
+应用以 Java 界面和 C/NDK 探测层组成，支持手机、平板、电视与手表布局。窗口兼容逻辑使用 AndroidX Core 1.13.1，避免 Android 5.0–9 在验证 API 30 窗口符号时发生 VerifyError。除用户主动使用系统分享或导出功能外，应用不访问网络、不上传探查结果，也不请求危险权限。
 
 ## 设计原则
 
@@ -73,7 +73,7 @@
 | 项目 | 支持范围 |
 |---|---|
 | 最低系统版本 | Android 5.0 / API 21 |
-| 构建 SDK | compileSdk 35，targetSdk 35 |
+| 构建 SDK | compileSdk 35，targetSdk 35；AndroidX Core 1.13.1 |
 | 原生 ABI | `armeabi-v7a`、`arm64-v8a`、`x86_64`；已移除已废弃的 32 位 x86 |
 | 图形 API | OpenGL ES 实际上下文检测；Vulkan 通过动态 `libvulkan.so` 加载，旧系统无 loader 时安全显示不可用。 |
 | 设备形态 | 手机、平板、Android TV/Leanback、Wear OS 与部分未声明 Wear feature 的原生 Android 手表。 |
@@ -117,6 +117,8 @@ sdk.dir=/path/to/Android/Sdk
 ./gradlew assembleDebug
 ```
 
+首次构建需要可访问 Gradle/Maven 依赖源，以下载 `androidx.core:core:1.13.1`。
+
 生成的 APK 位于：
 
 ```text
@@ -131,7 +133,7 @@ app/build/outputs/apk/debug/app-debug.apk
 
 ## 工程安全与性能
 
-原生报告缓冲区使用堆内存并在 JNI 返回后释放；`/proc`、`/sys` 和 EDID 读取处理 EINTR/短读，并在报告达到上限时明确标记截断。屏幕测试使用 API 30+ `WindowInsetsController`，手表提供长按退出，触摸轨迹按 pointer ID 处理；导出使用 try-with-resources，Activity 销毁后不会继续更新已分离的 View。
+原生报告缓冲区使用堆内存并在 JNI 返回后释放；`/proc`、`/sys` 和 EDID 读取处理 EINTR/短读，并在报告达到上限时明确标记截断。屏幕测试使用 AndroidX `WindowCompat`、`WindowInsetsCompat` 和 `WindowInsetsControllerCompat`，手表提供长按退出，触摸轨迹按 pointer ID 处理；导出使用 try-with-resources，Activity 销毁后不会继续更新已分离的 View。
 
 Release 默认启用 R8 和资源压缩。签名密钥只从仓库外的 Gradle 属性读取，避免私钥进入源码或版本历史。
 
