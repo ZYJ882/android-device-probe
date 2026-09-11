@@ -1317,7 +1317,7 @@ public final class MainActivity extends android.app.Activity {
         append(out, "应用支持 ABI", appSupportedAbis());
         append(out, "应用安装推荐 ABI", recommendedAbi());
         append(out, "应用正在使用", nativeValue(nativeResult, "native ABI"));
-        append(out, "说明", "CPU 频率只显示系统实际公开结果；DDR 内存类型请在“内存与存储”中查看。完整驱动/原始数据请展开“技术原始数据”。");
+        append(out, "说明", "系统架构只显示系统首选运行 ABI 对应的架构；设备支持 ABI 是独立列表，不与系统架构合并。CPU 频率只显示系统实际公开结果；DDR 内存类型请在“内存与存储”中查看。完整驱动/原始数据请展开“技术原始数据”。");
         return out.toString();
     }
 
@@ -1485,28 +1485,16 @@ public final class MainActivity extends android.app.Activity {
 
     private String systemArchitecture() {
         String[] abis = Build.SUPPORTED_ABIS;
-        if (abis == null || abis.length == 0) return "系统未公开";
-        boolean arm64 = false;
-        boolean arm32 = false;
-        boolean x8664 = false;
-        boolean x8632 = false;
-        for (String abi : abis) {
-            if ("arm64-v8a".equals(abi)) arm64 = true;
-            else if ("armeabi-v7a".equals(abi) || "armeabi".equals(abi)) arm32 = true;
-            else if ("x86_64".equals(abi)) x8664 = true;
-            else if ("x86".equals(abi)) x8632 = true;
-        }
-        StringBuilder result = new StringBuilder();
-        if (arm64) result.append("64 位 ARM (arm64-v8a)");
-        if (arm32) appendArchitecture(result, "32 位 ARM (armeabi-v7a)");
-        if (x8664) appendArchitecture(result, "64 位 x86 (x86_64)");
-        if (x8632) appendArchitecture(result, "32 位 x86 (x86)");
-        return result.length() == 0 ? join(abis) : result.toString();
+        if (abis == null || abis.length == 0 || TextUtils.isEmpty(abis[0])) return "系统未公开";
+        return architectureName(abis[0]) + "（系统首选运行 ABI：" + abis[0] + "）";
     }
 
-    private static void appendArchitecture(StringBuilder result, String value) {
-        if (result.length() > 0) result.append("；");
-        result.append(value);
+    private static String architectureName(String abi) {
+        if ("arm64-v8a".equals(abi)) return "64 位 ARM";
+        if ("armeabi-v7a".equals(abi) || "armeabi".equals(abi)) return "32 位 ARM";
+        if ("x86_64".equals(abi)) return "64 位 x86";
+        if ("x86".equals(abi)) return "32 位 x86";
+        return abi;
     }
 
     private String appSupportedAbis() {

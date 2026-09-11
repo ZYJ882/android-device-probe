@@ -22,7 +22,7 @@
 |---|---|---|
 | 设备与系统 | 厂商、型号、设备代号、Android/API、安全补丁、设备类型与手动纠正 | `Build`、`Configuration`、`PackageManager` |
 | 小屏 Android 手表 | 保留 Wear OS 适配，同时识别非 Wear OS 的华强北/小手机式手表；读取分辨率、逻辑 DPI、xdpi、ydpi、物理对角线和屏幕比例并自动调整 UI dp | `DisplayMetrics`、`Configuration`、`PackageManager` |
-| CPU 与 ABI | 系统架构、CPU 架构、CPU ABI、在线逻辑核心、在线 CPU 列表、每核心当前/最大频率候选、调速器、设备首选 ABI、设备支持 ABI、应用实际打包 ABI 与安装推荐 ABI | C/NDK、`uname`、`/sys/devices/system/cpu`、`Build`、Gradle ABI filters |
+| CPU 与 ABI | 系统首选运行架构、CPU 架构、CPU ABI、在线逻辑核心、在线 CPU 列表、每核心当前/最大频率候选、调速器、设备首选 ABI、设备支持 ABI、应用实际打包 ABI 与安装推荐 ABI | C/NDK、`uname`、`/sys/devices/system/cpu`、`Build`、Gradle ABI filters |
 | GPU 与图形 API | OpenGL ES 厂商、渲染器、版本、GLSL、扩展数量；Vulkan loader、实例 API、物理设备、驱动和扩展 | 实际 EGL/OpenGL ES 上下文、C/NDK 动态加载 Vulkan |
 | 内存与存储 | 总内存、可用内存、使用比例、存储总量/可用量、DDR 公开字段与内存硬件名称候选 | `ActivityManager`、`StatFs`、`/proc/meminfo`、公开 `/sys` |
 | 电池 | 电量、状态、健康枚举、温度、电压、外接电源、公开的厂商/型号与条件式健康度估算 | `ACTION_BATTERY_CHANGED`、`BatteryManager`、`/sys/class/power_supply` |
@@ -75,7 +75,7 @@
 |---|---|
 | 最低系统版本 | Android 5.0 / API 21；界面同时显示当前系统 API level |
 | 构建 SDK | compileSdk 35，targetSdk 35；AndroidX Core 1.13.1 |
-| 系统架构与原生 ABI | 界面显示 32/64 位及 ARM/x86 系统架构；APK 原生 ABI 为 `armeabi-v7a`、`arm64-v8a`、`x86_64`，已移除已废弃的 32 位 x86 |
+| 系统架构与原生 ABI | 系统架构只显示系统首选运行 ABI 对应的 32/64 位 ARM/x86 架构；设备支持 ABI 单独列出；APK 原生 ABI 为 `armeabi-v7a`、`arm64-v8a`、`x86_64` |
 | 图形 API | OpenGL ES 实际上下文检测；Vulkan 通过动态 `libvulkan.so` 加载，旧系统无 loader 时安全显示不可用。 |
 | 设备形态 | 手机、平板、Android TV/Leanback、Wear OS，以及不声明 Wear feature、但具备小屏/近方形/低分辨率组合线索的华强北式 Android 手表。两套手表规则并存，不相互覆盖。 |
 | 权限 | 无 `uses-permission` 条目。 |
