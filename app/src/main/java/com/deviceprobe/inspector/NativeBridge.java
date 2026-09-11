@@ -11,4 +11,7 @@ final class NativeBridge {
     static native String collectNativeData();
 
     static native String collectVulkanData();
+
+    /** Returns the pointer width of the running application process, or 0 if unavailable. */
+    static native int processBitness();
 }

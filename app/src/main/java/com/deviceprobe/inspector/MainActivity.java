@@ -1301,6 +1301,8 @@ public final class MainActivity extends android.app.Activity {
 
     private String buildPerformanceHardwareSummary(String nativeResult, String gpuResult) {
         StringBuilder out = new StringBuilder();
+        append(out, "Android 系统位数", androidSystemBitness());
+        append(out, "当前应用进程位数", processBitness());
         append(out, "系统架构", systemArchitecture());
         append(out, "CPU 架构", nativeValue(nativeResult, "uname.machine"));
         append(out, "CPU ABI", nativeValue(nativeResult, "native ABI"));
@@ -1481,6 +1483,41 @@ public final class MainActivity extends android.app.Activity {
         append(out, "健康度（电量计估算）", batterySoh(nativeResult));
         append(out, "数据来源", "ACTION_BATTERY_CHANGED、BatteryManager 和 /sys/class/power_supply；健康度不是实验室测量值。");
         return out.toString();
+    }
+
+    private String androidSystemBitness() {
+        try {
+            Class<?> runtimeClass = Class.forName("dalvik.system.VMRuntime");
+            Object runtime = runtimeClass.getDeclaredMethod("getRuntime").invoke(null);
+            Object value = runtimeClass.getDeclaredMethod("is64Bit").invoke(runtime);
+            if (value instanceof Boolean) return ((Boolean) value) ? "64 位（Android 运行时）" : "32 位（Android 运行时）";
+        } catch (ReflectiveOperationException | SecurityException ignored) {
+            // Hidden API access may be restricted on newer Android versions; use filesystem fallback below.
+        }
+        if (new java.io.File("/system/bin/app_process64").exists()
+                || new java.io.File("/system/bin/linker64").exists()) {
+            return "64 位（系统运行时文件回退判断）";
+        }
+        if (Build.SUPPORTED_64_BIT_ABIS != null && Build.SUPPORTED_64_BIT_ABIS.length > 0
+                && (Build.SUPPORTED_32_BIT_ABIS == null || Build.SUPPORTED_32_BIT_ABIS.length == 0)) {
+            return "64 位（系统 ABI 回退判断）";
+        }
+        if (Build.SUPPORTED_ABIS != null && Build.SUPPORTED_ABIS.length > 0
+                && Build.SUPPORTED_64_BIT_ABIS != null && Build.SUPPORTED_64_BIT_ABIS.length == 0
+                && Build.SUPPORTED_32_BIT_ABIS != null && Build.SUPPORTED_32_BIT_ABIS.length > 0) {
+            return "32 位（系统 ABI 回退判断）";
+        }
+        return "无法确认（系统未公开统一字段）";
+    }
+
+    private String processBitness() {
+        try {
+            int bits = NativeBridge.processBitness();
+            if (bits == 32 || bits == 64) return bits + " 位（NDK sizeof(void*)）";
+        } catch (UnsatisfiedLinkError ignored) {
+            // Native library unavailable; keep the result explicit.
+        }
+        return "无法确认";
     }
 
     private String systemArchitecture() {

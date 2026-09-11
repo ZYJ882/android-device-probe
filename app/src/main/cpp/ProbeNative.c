@@ -5,6 +5,7 @@
 #include <dlfcn.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -505,6 +506,13 @@ static const char *compiled_abi(void) {
 #else
     return "unknown";
 #endif
+}
+
+JNIEXPORT jint JNICALL
+Java_com_deviceprobe_inspector_NativeBridge_processBitness(JNIEnv *env, jclass clazz) {
+    (void) env;
+    (void) clazz;
+    return (jint) (sizeof(void *) * CHAR_BIT);
 }
 
 JNIEXPORT jstring JNICALL
