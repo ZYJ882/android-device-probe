@@ -1301,7 +1301,10 @@ public final class MainActivity extends android.app.Activity {
 
     private String buildPerformanceHardwareSummary(String nativeResult, String gpuResult) {
         StringBuilder out = new StringBuilder();
+        append(out, "系统架构", systemArchitecture());
         append(out, "CPU 架构", nativeValue(nativeResult, "uname.machine"));
+        append(out, "CPU ABI", nativeValue(nativeResult, "native ABI"));
+        append(out, "系统 API", "Android API " + Build.VERSION.SDK_INT + "（" + safe(Build.VERSION.RELEASE) + "）");
         append(out, "逻辑核心", nativeValue(nativeResult, "POSIX 在线逻辑 CPU") + " 个");
         String cpuRaw = nativeSection(nativeResult, "[CPU 深度原始节点]", "[内核导出原文");
         appendCpuFrequencyRows(out, "当前频率", cpuKHz(indexedCpuValue(cpuRaw, "scaling_cur_freq_khz")));
@@ -1312,6 +1315,7 @@ public final class MainActivity extends android.app.Activity {
         append(out, "设备首选 ABI", Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "系统未公开");
         append(out, "设备支持 ABI", join(Build.SUPPORTED_ABIS));
         append(out, "应用支持 ABI", appSupportedAbis());
+        append(out, "应用安装推荐 ABI", recommendedAbi());
         append(out, "应用正在使用", nativeValue(nativeResult, "native ABI"));
         append(out, "说明", "CPU 频率只显示系统实际公开结果；DDR 内存类型请在“内存与存储”中查看。完整驱动/原始数据请展开“技术原始数据”。");
         return out.toString();
@@ -1479,8 +1483,34 @@ public final class MainActivity extends android.app.Activity {
         return out.toString();
     }
 
+    private String systemArchitecture() {
+        String[] abis = Build.SUPPORTED_ABIS;
+        if (abis == null || abis.length == 0) return "系统未公开";
+        boolean arm64 = false;
+        boolean arm32 = false;
+        boolean x8664 = false;
+        boolean x8632 = false;
+        for (String abi : abis) {
+            if ("arm64-v8a".equals(abi)) arm64 = true;
+            else if ("armeabi-v7a".equals(abi) || "armeabi".equals(abi)) arm32 = true;
+            else if ("x86_64".equals(abi)) x8664 = true;
+            else if ("x86".equals(abi)) x8632 = true;
+        }
+        StringBuilder result = new StringBuilder();
+        if (arm64) result.append("64 位 ARM (arm64-v8a)");
+        if (arm32) appendArchitecture(result, "32 位 ARM (armeabi-v7a)");
+        if (x8664) appendArchitecture(result, "64 位 x86 (x86_64)");
+        if (x8632) appendArchitecture(result, "32 位 x86 (x86)");
+        return result.length() == 0 ? join(abis) : result.toString();
+    }
+
+    private static void appendArchitecture(StringBuilder result, String value) {
+        if (result.length() > 0) result.append("；");
+        result.append(value);
+    }
+
     private String appSupportedAbis() {
-        return "arm64-v8a, armeabi-v7a, x86, x86_64";
+        return "arm64-v8a, armeabi-v7a, x86_64（本 APK 实际打包）";
     }
 
     private String recommendedAbi() {
@@ -1496,7 +1526,7 @@ public final class MainActivity extends android.app.Activity {
 
     private boolean isAppSupportedAbi(String abi) {
         return "arm64-v8a".equals(abi) || "armeabi-v7a".equals(abi)
-                || "x86".equals(abi) || "x86_64".equals(abi);
+                || "x86_64".equals(abi);
     }
 
     private String nativeValue(String nativeResult, String key) {
@@ -1859,6 +1889,7 @@ public final class MainActivity extends android.app.Activity {
     private int wrap() { return ViewGroup.LayoutParams.WRAP_CONTENT; }
 
     private int dp(int value) {
-        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+        float density = getResources().getDisplayMetrics().density;
+        return (int) (deviceProfile == null ? value * density + 0.5f : deviceProfile.dp(value, density) + 0.5f);
     }
 }

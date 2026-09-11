@@ -29,6 +29,11 @@ final class DeviceProfile {
     final int widthPx;
     final int heightPx;
     final int densityDpi;
+    final float xdpi;
+    final float ydpi;
+    final float physicalDiagonalInches;
+    final float adaptiveDensity;
+    final boolean wearSystemDeclared;
     final int smallestWidthDp;
     final int uiModeType;
     final boolean screenRound;
@@ -37,7 +42,7 @@ final class DeviceProfile {
 
     private DeviceProfile(Kind kind, Kind automaticKind, Confidence confidence, Confidence automaticConfidence,
                           DisplayMetrics metrics, Configuration config, boolean screenRound,
-                          boolean manualOverride, String evidence) {
+                          boolean manualOverride, String evidence, boolean wearSystemDeclared) {
         this.kind = kind;
         this.automaticKind = automaticKind;
         this.confidence = confidence;
@@ -45,6 +50,11 @@ final class DeviceProfile {
         this.widthPx = metrics.widthPixels;
         this.heightPx = metrics.heightPixels;
         this.densityDpi = metrics.densityDpi;
+        this.xdpi = metrics.xdpi;
+        this.ydpi = metrics.ydpi;
+        this.physicalDiagonalInches = diagonalInches(metrics);
+        this.wearSystemDeclared = wearSystemDeclared;
+        this.adaptiveDensity = calculateAdaptiveDensity(metrics, kind, wearSystemDeclared);
         this.smallestWidthDp = config.smallestScreenWidthDp;
         this.uiModeType = config.uiMode & Configuration.UI_MODE_TYPE_MASK;
         this.screenRound = screenRound;
@@ -58,18 +68,17 @@ final class DeviceProfile {
         PackageManager pm = context.getPackageManager();
         int uiMode = config.uiMode & Configuration.UI_MODE_TYPE_MASK;
         boolean round = Build.VERSION.SDK_INT >= 23 && config.isScreenRound();
+        boolean wearSystemDeclared = pm.hasSystemFeature(PackageManager.FEATURE_WATCH)
+                || uiMode == Configuration.UI_MODE_TYPE_WATCH;
         List<String> reasons = new ArrayList<>();
 
         Kind automaticKind;
         Confidence automaticConfidence;
-        if (pm.hasSystemFeature(PackageManager.FEATURE_WATCH)) {
+        if (wearSystemDeclared) {
             automaticKind = Kind.WATCH;
             automaticConfidence = Confidence.CONFIRMED;
-            reasons.add("系统特性 FEATURE_WATCH");
-        } else if (uiMode == Configuration.UI_MODE_TYPE_WATCH) {
-            automaticKind = Kind.WATCH;
-            automaticConfidence = Confidence.CONFIRMED;
-            reasons.add("系统 UI 模式为 WATCH");
+            reasons.add(pm.hasSystemFeature(PackageManager.FEATURE_WATCH)
+                    ? "系统特性 FEATURE_WATCH" : "系统 UI 模式为 WATCH");
         } else if (pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
                 || pm.hasSystemFeature(PackageManager.FEATURE_TELEVISION)) {
             automaticKind = Kind.TELEVISION;
@@ -84,20 +93,19 @@ final class DeviceProfile {
             int shortPx = Math.min(metrics.widthPixels, metrics.heightPixels);
             int longPx = Math.max(metrics.widthPixels, metrics.heightPixels);
             float ratio = shortPx == 0 ? 99f : longPx / (float) shortPx;
-            boolean verySmallDp = config.smallestScreenWidthDp > 0 && config.smallestScreenWidthDp <= 280;
-            boolean verySmallPixels = shortPx <= 520;
-            boolean nearSquare = ratio <= 1.38f;
-            if (round && verySmallDp) {
+            float diagonal = diagonalInches(metrics);
+            boolean verySmallDp = config.smallestScreenWidthDp > 0 && config.smallestScreenWidthDp <= 320;
+            boolean verySmallPixels = shortPx > 0 && shortPx <= 600;
+            boolean nearSquare = ratio <= 1.45f;
+            boolean smallPhysicalScreen = diagonal > 0 && diagonal <= 3.2f;
+            boolean compactAndroidWatch = nearSquare && verySmallPixels && (verySmallDp || smallPhysicalScreen);
+            if (compactAndroidWatch) {
                 automaticKind = Kind.WATCH;
                 automaticConfidence = Confidence.SUSPECTED;
-                reasons.add("圆形屏幕");
-                reasons.add("最小宽度 " + config.smallestScreenWidthDp + "dp ≤ 280dp");
-            } else if (verySmallDp && verySmallPixels && nearSquare) {
-                automaticKind = Kind.WATCH;
-                automaticConfidence = Confidence.SUSPECTED;
-                reasons.add("最小宽度 " + config.smallestScreenWidthDp + "dp ≤ 280dp");
-                reasons.add("短边 " + shortPx + "px ≤ 520px");
-                reasons.add("接近方形显示比例 " + String.format(java.util.Locale.US, "%.2f", ratio));
+                reasons.add(round ? "圆形/近圆形屏幕" : "接近方形小屏");
+                reasons.add("短边 " + shortPx + "px，显示比例 " + String.format(java.util.Locale.US, "%.2f", ratio));
+                reasons.add("逻辑 " + metrics.densityDpi + "dpi；xdpi " + formatDpi(metrics.xdpi) + "；ydpi " + formatDpi(metrics.ydpi));
+                if (diagonal > 0) reasons.add("物理对角线约 " + formatInches(diagonal));
             } else if (config.smallestScreenWidthDp >= 600) {
                 automaticKind = Kind.TABLET;
                 automaticConfidence = Confidence.STANDARD;
@@ -115,13 +123,13 @@ final class DeviceProfile {
             try {
                 Kind selected = Kind.valueOf(override);
                 return new DeviceProfile(selected, automaticKind, Confidence.MANUAL, automaticConfidence, metrics, config, round,
-                        true, "用户手动选择 " + humanName(selected) + "；自动判断为 " + automaticLabel(automaticKind, automaticConfidence));
+                        true, "用户手动选择 " + humanName(selected) + "；自动判断为 " + automaticLabel(automaticKind, automaticConfidence), wearSystemDeclared);
             } catch (IllegalArgumentException ignored) {
                 preferences.edit().remove(KEY_OVERRIDE).apply();
             }
         }
         return new DeviceProfile(automaticKind, automaticKind, automaticConfidence, automaticConfidence, metrics, config, round,
-                false, join(reasons));
+                false, join(reasons), wearSystemDeclared);
     }
 
     static void saveOverride(Context context, Kind kindOrNull) {
@@ -144,12 +152,18 @@ final class DeviceProfile {
 
     boolean isWatch() { return kind == Kind.WATCH; }
     boolean isTelevision() { return kind == Kind.TELEVISION; }
+    boolean isCompactAndroidWatch() { return isWatch() && !wearSystemDeclared; }
+    float dp(float value, float systemDensity) {
+        float density = adaptiveDensity > 0 ? adaptiveDensity : systemDensity;
+        return value * density;
+    }
     boolean isSuspectedWatch() { return kind == Kind.WATCH && confidence == Confidence.SUSPECTED; }
 
     String label() {
         if (confidence == Confidence.MANUAL) return humanName(kind) + "（用户已手动选择）";
         if (confidence == Confidence.CONFIRMED) return humanName(kind) + "（系统已确认）";
-        if (confidence == Confidence.SUSPECTED) return "疑似 Android 手表（组合线索）";
+        if (confidence == Confidence.SUSPECTED) return isCompactAndroidWatch()
+                ? "疑似小屏 Android 手表（非 Wear OS）" : "疑似 Android 手表（组合线索）";
         if (kind == Kind.TABLET) return "平板（最小宽度 ≥ 600dp）";
         return "手机/未确认设备";
     }
@@ -161,15 +175,20 @@ final class DeviceProfile {
         return "判定：" + label() + "\n"
                 + "自动判定：" + automaticLabel() + "\n"
                 + "依据：" + evidence + "\n"
-                + "屏幕：" + widthPx + " × " + heightPx + " px，" + densityDpi + " dpi，最小宽度 "
-                + smallestWidthDp + "dp，圆形屏幕 " + roundText + "\n"
+                + "屏幕：" + widthPx + " × " + heightPx + " px，逻辑 " + densityDpi + " dpi，xdpi "
+                + formatDpi(xdpi) + "，ydpi " + formatDpi(ydpi) + "，物理对角线约 " + formatInches(physicalDiagonalInches)
+                + "，最小宽度 " + smallestWidthDp + "dp，圆形屏幕 " + roundText + "\n"
+                + "布局：" + (isCompactAndroidWatch() ? "华强北/小屏 Android 自适应规则" : (wearSystemDeclared ? "Wear OS/系统手表规则" : "标准 Android 规则"))
+                + "，有效 UI 密度约 " + formatDpi(adaptiveDensity * 160f) + "\n"
                 + "说明：不依据品牌、机型或“和顺成”等方案名称断言系统类型。可点击“纠正设备类型”切换布局。";
     }
 
     String screenRule() {
-        if (isWatch()) return isSuspectedWatch()
+        if (isWatch())             return isCompactAndroidWatch()
+                ? "华强北/小屏 Android 规则：保留手机 Android 行为，按真实分辨率、DPI 和短边自动缩放 dp。"
+                : (isSuspectedWatch()
                 ? "疑似手表规则：已启用小屏单列与简化控制；可手动纠正。"
-                : "手表规则：单列、紧凑边距、大触控目标；屏幕测试使用小屏控制。";
+                : "Wear OS/系统手表规则：单列、紧凑边距、大触控目标；屏幕测试使用小屏控制。");
         if (isTelevision()) return "电视规则：大屏焦点、横向布局与遥控器方向键/确认键控制。";
         if (kind == Kind.TABLET) return "平板规则：较宽边距与多列概览；屏幕测试按实际显示区域绘制。";
         return "手机规则：触摸优先布局；屏幕测试按实际显示区域绘制。";
@@ -189,6 +208,33 @@ final class DeviceProfile {
             case TABLET: return "平板";
             default: return "手机";
         }
+    }
+
+    private static float calculateAdaptiveDensity(DisplayMetrics metrics, Kind kind, boolean wearSystemDeclared) {
+        if (kind != Kind.WATCH || wearSystemDeclared) return metrics.density;
+        int shortPx = Math.min(metrics.widthPixels, metrics.heightPixels);
+        if (shortPx <= 0) return metrics.density;
+        float physicalTarget = shortPx / 240f;
+        return clamp(Math.min(metrics.density, physicalTarget), 0.85f, 1.60f);
+    }
+
+    private static float diagonalInches(DisplayMetrics metrics) {
+        if (metrics.xdpi <= 0 || metrics.ydpi <= 0) return 0f;
+        float width = metrics.widthPixels / metrics.xdpi;
+        float height = metrics.heightPixels / metrics.ydpi;
+        return (float) Math.sqrt(width * width + height * height);
+    }
+
+    private static float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    private static String formatDpi(float value) {
+        return value > 0 ? String.format(java.util.Locale.US, "%.1f", value) : "未知";
+    }
+
+    private static String formatInches(float value) {
+        return value > 0 ? String.format(java.util.Locale.US, "%.2f 英寸", value) : "未知";
     }
 
     private static String join(List<String> values) {

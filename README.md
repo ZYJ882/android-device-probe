@@ -21,7 +21,8 @@
 | 模块 | 采集内容 | 主要来源 |
 |---|---|---|
 | 设备与系统 | 厂商、型号、设备代号、Android/API、安全补丁、设备类型与手动纠正 | `Build`、`Configuration`、`PackageManager` |
-| CPU 与 ABI | 内核架构、在线逻辑核心、在线 CPU 列表、每核心当前/最大频率候选、调速器、设备/应用 ABI | C/NDK、`uname`、`/sys/devices/system/cpu`、`Build` |
+| 小屏 Android 手表 | 保留 Wear OS 适配，同时识别非 Wear OS 的华强北/小手机式手表；读取分辨率、逻辑 DPI、xdpi、ydpi、物理对角线和屏幕比例并自动调整 UI dp | `DisplayMetrics`、`Configuration`、`PackageManager` |
+| CPU 与 ABI | 系统架构、CPU 架构、CPU ABI、在线逻辑核心、在线 CPU 列表、每核心当前/最大频率候选、调速器、设备首选 ABI、设备支持 ABI、应用实际打包 ABI 与安装推荐 ABI | C/NDK、`uname`、`/sys/devices/system/cpu`、`Build`、Gradle ABI filters |
 | GPU 与图形 API | OpenGL ES 厂商、渲染器、版本、GLSL、扩展数量；Vulkan loader、实例 API、物理设备、驱动和扩展 | 实际 EGL/OpenGL ES 上下文、C/NDK 动态加载 Vulkan |
 | 内存与存储 | 总内存、可用内存、使用比例、存储总量/可用量、DDR 公开字段与内存硬件名称候选 | `ActivityManager`、`StatFs`、`/proc/meminfo`、公开 `/sys` |
 | 电池 | 电量、状态、健康枚举、温度、电压、外接电源、公开的厂商/型号与条件式健康度估算 | `ACTION_BATTERY_CHANGED`、`BatteryManager`、`/sys/class/power_supply` |
@@ -72,14 +73,14 @@
 
 | 项目 | 支持范围 |
 |---|---|
-| 最低系统版本 | Android 5.0 / API 21 |
+| 最低系统版本 | Android 5.0 / API 21；界面同时显示当前系统 API level |
 | 构建 SDK | compileSdk 35，targetSdk 35；AndroidX Core 1.13.1 |
-| 原生 ABI | `armeabi-v7a`、`arm64-v8a`、`x86_64`；已移除已废弃的 32 位 x86 |
+| 系统架构与原生 ABI | 界面显示 32/64 位及 ARM/x86 系统架构；APK 原生 ABI 为 `armeabi-v7a`、`arm64-v8a`、`x86_64`，已移除已废弃的 32 位 x86 |
 | 图形 API | OpenGL ES 实际上下文检测；Vulkan 通过动态 `libvulkan.so` 加载，旧系统无 loader 时安全显示不可用。 |
-| 设备形态 | 手机、平板、Android TV/Leanback、Wear OS 与部分未声明 Wear feature 的原生 Android 手表。 |
+| 设备形态 | 手机、平板、Android TV/Leanback、Wear OS，以及不声明 Wear feature、但具备小屏/近方形/低分辨率组合线索的华强北式 Android 手表。两套手表规则并存，不相互覆盖。 |
 | 权限 | 无 `uses-permission` 条目。 |
 
-电视启动器提供 16:9 Banner，并显式声明触控为可选；这使同一个 APK 不会因默认触控要求而被电视设备过滤。手表类型无法由标准特征确认时，应用只会标记为“疑似 Android 手表”，并保留用户手动纠正选项。[6] [7]
+电视启动器提供 16:9 Banner，并显式声明触控为可选；这使同一个 APK 不会因默认触控要求而被电视设备过滤。Wear OS 设备继续优先使用系统手表规则。对于华强北式小手机 Android 手表，应用不会依据品牌或“和顺成”等名称断言，而是使用真实分辨率、逻辑 DPI、xdpi/ydpi、物理对角线和近方形比例的组合线索；命中后启用独立的小屏 Android 自适应 dp 规则，并保留用户手动纠正选项。[6] [7]
 
 ## 已知边界
 
