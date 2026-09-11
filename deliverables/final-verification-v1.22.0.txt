@@ -1,0 +1,26 @@
+Android Device Probe v1.22.0 最终验收报告
+========================================
+
+版本：versionCode 23，versionName 1.22.0
+包名：com.deviceprobe.inspector
+最低系统：Android 5.0 / API 21
+
+本版本新增独立“系统架构”字段：依据 Build.SUPPORTED_ABIS 归纳 32/64 位 ARM 或 x86；同时保留 C/NDK uname.machine 的 CPU 架构、Native 实际 CPU ABI、设备首选 ABI、设备支持 ABI、应用实际支持 ABI、应用安装推荐 ABI 和应用正在使用 ABI。
+
+应用实际打包 ABI：arm64-v8a、armeabi-v7a、x86_64。已移除不实际打包的 x86，推荐 ABI 按设备支持 ABI 与 APK 实际 ABI 的交集计算。
+
+Wear OS 适配和华强北小屏 Android 手表适配均保留。
+
+构建验证：
+  ./gradlew clean assembleDebug assembleRelease lintDebug lintRelease --no-daemon
+  结果：BUILD SUCCESSFUL
+
+Release APK 元数据：compileSdk 35，targetSdk 35，minSdk 21，versionCode 23，versionName 1.22.0。
+Release APK 签名：v1 JAR signing true；v2 APK Signature Scheme v2 true；签名者 1。
+
+SHA-256：
+ bf92ec696720f24824ac7370d4ce851090ee141f4f0c589321f9b7c608652c78  android-device-probe-v1.22.0-final-release.apk
+ 0a82db8ff8701b1178f7bf04f44582cc899f09f1b5bb8e6f1189da1b9e7ce7b6  android-device-probe-v1.22.0-final-debug.apk
+ 1b48d5aabee20a8f973de1ff07fc1e5a4d571efec52d676e0fb64d3ea079ab63  android-device-probe-v1.22.0-clean-source.zip
+
+说明：当前未连接用户的实际华强北手表，无法替代真机确认厂商 DisplayMetrics 上报值；安装后可在设备详情中检查系统架构、系统 API、设备支持 ABI、应用安装推荐 ABI 和实际使用 ABI。
