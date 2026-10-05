@@ -14,4 +14,7 @@ final class NativeBridge {
 
     /** Returns the pointer width of the running application process, or 0 if unavailable. */
     static native int processBitness();
+
+    /** Returns Binder protocol version (7/8), or a negative errno when unavailable. */
+    static native int binderProtocolVersion();
 }

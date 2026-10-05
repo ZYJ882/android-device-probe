@@ -20,9 +20,9 @@
 
 | 模块 | 采集内容 | 主要来源 |
 |---|---|---|
-| 设备与系统 | 厂商、型号、设备代号、Android/API、安全补丁、设备类型与手动纠正 | `Build`、`Configuration`、`PackageManager` |
+| 设备与系统 | 厂商、型号、设备代号、Android/API、安全补丁、ROM 构建者/主机/类型、设备类型与手动纠正 | `Build`、`Configuration`、`PackageManager` |
 | 小屏 Android 手表 | 保留 Wear OS 适配，同时识别非 Wear OS 的华强北/小手机式手表；读取分辨率、逻辑 DPI、xdpi、ydpi、物理对角线和屏幕比例并自动调整 UI dp | `DisplayMetrics`、`Configuration`、`PackageManager` |
-| CPU 与 ABI | 系统首选运行架构、CPU 架构、CPU ABI、在线逻辑核心、在线 CPU 列表、每核心当前/最大频率候选、调速器、设备首选 ABI、设备支持 ABI、应用实际打包 ABI 与安装推荐 ABI | C/NDK、`uname`、`/sys/devices/system/cpu`、`Build`、Gradle ABI filters |
+| CPU 与 ABI | Binder 协议位数、Android 系统位数、当前进程位数/架构/ABI、当前系统 ABI、CPU 架构、在线逻辑核心、在线 CPU 列表、每核心当前/最大频率候选、调速器、设备首选 ABI、设备支持 ABI、32/64 位 CPU ABI、应用实际打包 ABI 与安装推荐 ABI | Binder ioctl、C/NDK、`os.arch`、`uname`、`/sys/devices/system/cpu`、`Build`、Gradle ABI filters |
 | GPU 与图形 API | OpenGL ES 厂商、渲染器、版本、GLSL、扩展数量；Vulkan loader、实例 API、物理设备、驱动和扩展 | 实际 EGL/OpenGL ES 上下文、C/NDK 动态加载 Vulkan |
 | 内存与存储 | 总内存、可用内存、使用比例、存储总量/可用量、DDR 公开字段与内存硬件名称候选 | `ActivityManager`、`StatFs`、`/proc/meminfo`、公开 `/sys` |
 | 电池 | 电量、状态、健康枚举、温度、电压、外接电源、公开的厂商/型号与条件式健康度估算 | `ACTION_BATTERY_CHANGED`、`BatteryManager`、`/sys/class/power_supply` |
@@ -52,6 +52,8 @@
 | 内核公开值 | 当前应用能够读取的 `/proc` 或 `/sys` 值 | CPUFreq、`power_supply` 电池厂商、DDR 原始候选字段 |
 | 估算 | 由明确公式从公开值计算，不等同于硬件实测 | 屏幕对角线估算、电量计的健康度估算 |
 | 无法确认 | 系统未公开或信息不能被普通应用可靠推断 | DRAM 颗粒厂商、面板物理型号、原生 10-bit 色深 |
+
+架构字段组织参考了 [AndroidLowLevelDetector](https://github.com/imknown/AndroidLowLevelDetector)：Binder 位数通过只读 Binder 驱动的 `BINDER_VERSION` ioctl 判断（协议 7/8），当前进程 ABI 来自本 APK 实际加载的 NDK 库，当前系统 ABI 与 32/64 位支持列表来自 Android `Build` 公开字段。Binder 节点不存在、被拒绝或协议异常时显示无法确认，不依据品牌或 ABI 列表反推 Binder 位数。
 
 ## 相机信息的判定方式
 

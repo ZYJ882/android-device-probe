@@ -8,15 +8,21 @@
 #include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/ioctl.h>
 #include <sys/utsname.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 #define REPORT_CAPACITY 65536
 #define READ_CAPACITY 8192
+
+struct binder_version_probe {
+    int32_t protocol_version;
+};
 
 static const char *safe_strerror(int errnum) {
     static _Thread_local char buffer[128];
@@ -514,7 +520,31 @@ Java_com_deviceprobe_inspector_NativeBridge_processBitness(JNIEnv *env, jclass c
     (void) clazz;
     return (jint) (sizeof(void *) * CHAR_BIT);
 }
-
+JNIEXPORT jint JNICALL
+Java_com_deviceprobe_inspector_NativeBridge_binderProtocolVersion(JNIEnv *env, jclass clazz) {
+    (void) env;
+    (void) clazz;
+    const char *drivers[] = {"/dev/binder", "/dev/hwbinder", "/dev/vndbinder"};
+    int saved_errno = ENOENT;
+    for (size_t index = 0; index < sizeof(drivers) / sizeof(drivers[0]); ++index) {
+        int fd = open(drivers[index], O_RDONLY | O_CLOEXEC);
+        if (fd < 0) {
+            saved_errno = errno;
+            continue;
+        }
+        struct binder_version_probe version;
+        memset(&version, 0, sizeof(version));
+        int request = (int) _IOWR('b', 9, struct binder_version_probe);
+        if (ioctl(fd, request, &version) < 0) {
+            saved_errno = errno;
+            close(fd);
+            continue;
+        }
+        close(fd);
+        return (jint) version.protocol_version;
+    }
+    return (jint) -saved_errno;
+}
 JNIEXPORT jstring JNICALL
 Java_com_deviceprobe_inspector_NativeBridge_collectVulkanData(JNIEnv *env, jclass clazz) {
     (void) clazz;

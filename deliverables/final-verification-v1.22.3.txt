@@ -1,0 +1,2 @@
+67942a704714c558ace1a2756ee8423411194aa743e9c12b0c92b573270f3e36  deliverables/android-device-probe-v1.22.3-final-release.apk
+e47dc312a7b9ddb7ba0c9d9720f38636162e0d52b628706f9306b173b72e2f41  deliverables/android-device-probe-v1.22.3-clean-source.zip

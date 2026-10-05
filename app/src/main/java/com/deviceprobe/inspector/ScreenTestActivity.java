@@ -354,7 +354,8 @@ public final class ScreenTestActivity extends Activity {
         private int contentHeight() { return Math.max(dp(40), bottom() - top()); }
         private float centerY() { return top() + contentHeight() / 2f; }
         private int dp(float value) {
-            return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+            float density = getResources().getDisplayMetrics().density;
+            return (int) (profile == null ? value * density + 0.5f : profile.dp(value, density) + 0.5f);
         }
         private void text(float sp, int color) { paint.setTextSize(dp(sp)); paint.setColor(color); paint.setStyle(Paint.Style.FILL); }
 

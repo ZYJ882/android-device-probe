@@ -1269,6 +1269,9 @@ public final class MainActivity extends android.app.Activity {
         append(out, "设备", safe(Build.MANUFACTURER) + " " + safe(Build.MODEL));
         append(out, "系统", "Android " + safe(Build.VERSION.RELEASE) + "（API " + Build.VERSION.SDK_INT + "）");
         append(out, "安全补丁", Build.VERSION.SDK_INT >= 23 ? Build.VERSION.SECURITY_PATCH : "当前系统未提供");
+        append(out, "ROM 构建者", buildValue(Build.USER));
+        append(out, "ROM 构建主机", buildValue(Build.HOST));
+        append(out, "ROM 构建类型", buildValue(Build.TYPE));
         append(out, "设备类型", deviceProfile.label());
         append(out, "设备代号", Build.DEVICE);
         if (deviceProfile.isSuspectedWatch() || deviceProfile.manualOverride) {
@@ -1301,11 +1304,15 @@ public final class MainActivity extends android.app.Activity {
 
     private String buildPerformanceHardwareSummary(String nativeResult, String gpuResult) {
         StringBuilder out = new StringBuilder();
+        append(out, "Binder 位数", binderBitness());
         append(out, "Android 系统位数", androidSystemBitness());
         append(out, "当前应用进程位数", processBitness());
+        append(out, "当前进程架构", processArchitecture());
+        append(out, "当前进程 ABI", nativeValue(nativeResult, "native ABI"));
+        append(out, "当前系统 ABI", currentSystemAbi());
         append(out, "系统架构", systemArchitecture());
         append(out, "CPU 架构", nativeValue(nativeResult, "uname.machine"));
-        append(out, "CPU ABI", nativeValue(nativeResult, "native ABI"));
+        append(out, "CPU ABI", currentSystemAbi());
         append(out, "系统 API", "Android API " + Build.VERSION.SDK_INT + "（" + safe(Build.VERSION.RELEASE) + "）");
         append(out, "逻辑核心", nativeValue(nativeResult, "POSIX 在线逻辑 CPU") + " 个");
         String cpuRaw = nativeSection(nativeResult, "[CPU 深度原始节点]", "[内核导出原文");
@@ -1314,8 +1321,10 @@ public final class MainActivity extends android.app.Activity {
         append(out, "GPU", gpuValue(gpuResult, "GL_RENDERER"));
         append(out, "GPU 厂商", gpuValue(gpuResult, "GL_VENDOR"));
         append(out, "图形接口", gpuValue(gpuResult, "GL_VERSION"));
-        append(out, "设备首选 ABI", Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "系统未公开");
+        append(out, "设备首选 ABI", firstAbi(Build.SUPPORTED_ABIS));
         append(out, "设备支持 ABI", join(Build.SUPPORTED_ABIS));
+        append(out, "支持的 32 位 CPU ABI", joinOrUnavailable(Build.SUPPORTED_32_BIT_ABIS));
+        append(out, "支持的 64 位 CPU ABI", joinOrUnavailable(Build.SUPPORTED_64_BIT_ABIS));
         append(out, "应用支持 ABI", appSupportedAbis());
         append(out, "应用安装推荐 ABI", recommendedAbi());
         append(out, "应用正在使用", nativeValue(nativeResult, "native ABI"));
@@ -1549,6 +1558,36 @@ public final class MainActivity extends android.app.Activity {
         return "无匹配 ABI（请使用通用 APK 或检查设备兼容性）";
     }
 
+    private String binderBitness() {
+        try {
+            int protocol = NativeBridge.binderProtocolVersion();
+            if (protocol == 7) return "32 位（Binder 协议 7）";
+            if (protocol == 8) return "64 位（Binder 协议 8）";
+            if (protocol < 0) return "无法确认（Binder 驱动不可读，errno=" + (-protocol) + "）";
+            return "无法确认（Binder 协议版本 " + protocol + "）";
+        } catch (UnsatisfiedLinkError ignored) {
+            return "无法确认（NDK 接口不可用）";
+        }
+    }
+    private static String processArchitecture() {
+        String value = System.getProperty("os.arch");
+        return TextUtils.isEmpty(value) ? "系统未公开" : value;
+    }
+    @SuppressWarnings("deprecation")
+    private static String currentSystemAbi() {
+        String abi = Build.CPU_ABI;
+        return TextUtils.isEmpty(abi) ? firstAbi(Build.SUPPORTED_ABIS) : abi;
+    }
+    private static String firstAbi(String[] abis) {
+        return abis != null && abis.length > 0 && !TextUtils.isEmpty(abis[0]) ? abis[0] : "系统未公开";
+    }
+    private static String joinOrUnavailable(String[] abis) {
+        if (abis == null || abis.length == 0) return "不支持或系统未公开";
+        return join(abis);
+    }
+    private static String buildValue(String value) {
+        return TextUtils.isEmpty(value) ? "设备未公开" : value;
+    }
     private boolean isAppSupportedAbi(String abi) {
         return "arm64-v8a".equals(abi) || "armeabi-v7a".equals(abi)
                 || "x86_64".equals(abi);
