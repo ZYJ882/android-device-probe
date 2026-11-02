@@ -1,0 +1,3 @@
+dc2657668215e09bfb42727633275532d619d6ae99d11aa9b6d6ee56d4a1dd5f  deliverables/android-device-probe-v3.2.0-final-release.apk
+7d2e8f1d30e48f21de06be828bae5bed0f2042055cf94ae5f86e7f4e69587e81  deliverables/android-device-probe-v3.2.0-final-debug.apk
+37ec572654d020ff3ed1c186322edad8a6a23443d1ef449c9ce301a07c179dbf  deliverables/android-device-probe-v3.2.0-clean-source.zip

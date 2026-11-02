@@ -1,23 +1,28 @@
-# Local Android / Gradle configuration and build output
+# Gradle
 .gradle/
-local.properties
+build/
+
+# Build outputs (never commit binaries)
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Android Studio / IntelliJ
 .idea/
 *.iml
-**/build/
-**/.cxx/
+captures/
+local.properties
 
-# Historical local distribution folders
-/dist/
+# Signing (never commit keys or passwords)
+*.jks
+*.keystore
 
-# Keep only the verified current install package and its verification record.
-*.apk
-deliverables/*.txt
-!deliverables/device-info-probe-v1.18.0-final-debug.apk
-!deliverables/final-verification-v1.18.0.txt
-*.zip
-deliverables/*.md
+# Native build artifacts
+.cxx/
+.externalNativeBuild/
+app/build/
 
-# OS/editor files
+# OS noise
 .DS_Store
 Thumbs.db
-*.swp

@@ -168,32 +168,6 @@ final class DeviceProfile {
         return "手机/未确认设备";
     }
 
-    String automaticLabel() { return automaticLabel(automaticKind, automaticConfidence); }
-
-    String detectionDetails() {
-        String roundText = Build.VERSION.SDK_INT >= 23 ? (screenRound ? "是" : "否") : "当前 API 未公开";
-        return "判定：" + label() + "\n"
-                + "自动判定：" + automaticLabel() + "\n"
-                + "依据：" + evidence + "\n"
-                + "屏幕：" + widthPx + " × " + heightPx + " px，逻辑 " + densityDpi + " dpi，xdpi "
-                + formatDpi(xdpi) + "，ydpi " + formatDpi(ydpi) + "，物理对角线约 " + formatInches(physicalDiagonalInches)
-                + "，最小宽度 " + smallestWidthDp + "dp，圆形屏幕 " + roundText + "\n"
-                + "布局：" + (isCompactAndroidWatch() ? "华强北/小屏 Android 自适应规则" : (wearSystemDeclared ? "Wear OS/系统手表规则" : "标准 Android 规则"))
-                + "，有效 UI 密度约 " + formatDpi(adaptiveDensity * 160f) + "\n"
-                + "说明：不依据品牌、机型或“和顺成”等方案名称断言系统类型。可点击“纠正设备类型”切换布局。";
-    }
-
-    String screenRule() {
-        if (isWatch())             return isCompactAndroidWatch()
-                ? "华强北/小屏 Android 规则：保留手机 Android 行为，按真实分辨率、DPI 和短边自动缩放 dp。"
-                : (isSuspectedWatch()
-                ? "疑似手表规则：已启用小屏单列与简化控制；可手动纠正。"
-                : "Wear OS/系统手表规则：单列、紧凑边距、大触控目标；屏幕测试使用小屏控制。");
-        if (isTelevision()) return "电视规则：大屏焦点、横向布局与遥控器方向键/确认键控制。";
-        if (kind == Kind.TABLET) return "平板规则：较宽边距与多列概览；屏幕测试按实际显示区域绘制。";
-        return "手机规则：触摸优先布局；屏幕测试按实际显示区域绘制。";
-    }
-
     private static String automaticLabel(Kind kind, Confidence confidence) {
         if (confidence == Confidence.CONFIRMED) return humanName(kind) + "（系统特性/UI 模式确认）";
         if (confidence == Confidence.SUSPECTED) return "疑似 Android 手表（非标准系统组合线索）";

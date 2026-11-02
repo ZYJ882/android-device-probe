@@ -11,8 +11,8 @@ android {
         applicationId 'com.deviceprobe.inspector'
         minSdk 21
         targetSdk 35
-        versionCode 25
-        versionName '1.22.3'
+        versionCode 31
+        versionName '3.2.0'
 
         externalNativeBuild {
             cmake {
@@ -74,4 +74,6 @@ android {
 
 dependencies {
     implementation 'androidx.core:core:1.13.1'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20231013'
 }

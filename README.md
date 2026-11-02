@@ -20,25 +20,27 @@
 
 | 模块 | 采集内容 | 主要来源 |
 |---|---|---|
-| 设备与系统 | 厂商、型号、设备代号、Android/API、安全补丁、ROM 构建者/主机/类型、设备类型与手动纠正 | `Build`、`Configuration`、`PackageManager` |
+| 设备与系统 | 厂商、型号、SoC、设备代号、板级型号、Android/API、ROM 版本、基础版本、安全补丁、构建类型/ID/指纹、设备类型与手动纠正 | `Build`、`Configuration`、`PackageManager`、`/proc/cpuinfo` |
 | 小屏 Android 手表 | 保留 Wear OS 适配，同时识别非 Wear OS 的华强北/小手机式手表；读取分辨率、逻辑 DPI、xdpi、ydpi、物理对角线和屏幕比例并自动调整 UI dp | `DisplayMetrics`、`Configuration`、`PackageManager` |
-| CPU 与 ABI | Binder 协议位数、Android 系统位数、当前进程位数/架构/ABI、当前系统 ABI、CPU 架构、在线逻辑核心、在线 CPU 列表、每核心当前/最大频率候选、调速器、设备首选 ABI、设备支持 ABI、32/64 位 CPU ABI、应用实际打包 ABI 与安装推荐 ABI | Binder ioctl、C/NDK、`os.arch`、`uname`、`/sys/devices/system/cpu`、`Build`、Gradle ABI filters |
-| GPU 与图形 API | OpenGL ES 厂商、渲染器、版本、GLSL、扩展数量；Vulkan loader、实例 API、物理设备、驱动和扩展 | 实际 EGL/OpenGL ES 上下文、C/NDK 动态加载 Vulkan |
-| 内存与存储 | 总内存、可用内存、使用比例、存储总量/可用量、DDR 公开字段与内存硬件名称候选 | `ActivityManager`、`StatFs`、`/proc/meminfo`、公开 `/sys` |
-| 电池 | 电量、状态、健康枚举、温度、电压、外接电源、公开的厂商/型号与条件式健康度估算 | `ACTION_BATTERY_CHANGED`、`BatteryManager`、`/sys/class/power_supply` |
-| 屏幕 | 分辨率、密度、尺寸估算、刷新率、系统广色域/HDR 报告、10-bit 公开边界、EDID 可读前 256 字节 | `Display`、`DisplayManager`、公开显示节点、DRM/sysfs |
-| 硬件能力 | 摄像头存在声明、Camera2 前/后/外置方向、四层摄像头详情、照片/视频尺寸、MP、焦距、光圈、对焦、ISO、曝光、OIS/EIS、RAW、HDR、逻辑/物理摄像头与静态/动态传感器能力 | `PackageManager`、Camera2、`SensorManager` |
+| CPU 与架构 | 内核架构/版本、CPU 架构、在线逻辑核心、核心结构（按 cluster 分组）、频率分布、当前/最高/最低频率、调频策略与驱动、Binder 协议位数、Android 系统位数、当前进程位数/ABI、设备支持 ABI（首选 ABI、32/64 位分项与安装推荐 ABI 仅保留在导出报告中） | Binder ioctl、C/NDK、`os.arch`、`uname`、`/sys/devices/system/cpu`、`Build` |
+| GPU 与图形 API | OpenGL ES 厂商、渲染器、版本、GLSL、压缩纹理支持（ASTC/ETC2/S3TC）、扩展数量与样例；Vulkan 系统特性、实例 API 版本、物理设备、设备类型、vendorID/deviceID、驱动版本、队列族与扩展 | 实际 EGL/OpenGL ES 上下文、C/NDK 动态加载 Vulkan |
+| 内存与存储 | 总内存、可用内存、使用比例、Swap/ZRAM、本应用 PSS、存储总量/可用量、文件系统块大小、DDR 公开字段与内存硬件名称候选 | `ActivityManager`、`StatFs`、`Debug`、`/proc/meminfo`、公开 `/sys` |
+| 电池 | 电量、状态、健康枚举、温度、电压、外接电源、设计容量与当前满充容量（mAh）、循环次数、电池技术、实时电流、充满剩余时间、公开的厂商/型号与条件式健康度估算 | `ACTION_BATTERY_CHANGED`、`BatteryManager`、`/sys/class/power_supply` |
+| 屏幕 | 分辨率、密度、物理像素密度（xdpi/ydpi）、尺寸估算、当前刷新率与支持的显示模式（分辨率 × 刷新率组合）、屏幕形状、刘海/挖孔安全区与挖孔尺寸（API 29+）、系统广色域/HDR 报告、系统期望峰值亮度、颜色模式列表；EDID 可读时解码面板 PNP ID、产品代码、生产周/年、原生分辨率与物理尺寸 | `Display`、`DisplayCutout`、`DisplayManager`、公开显示节点、DRM/sysfs |
+| 连接与生物识别 | GPS/网络定位、Wi-Fi、蓝牙/BLE、NFC、USB Host、红外遥控、FM 收音机、指纹/人脸/虹膜、多点触控、振动幅度控制、专业/低延迟音频 | `PackageManager`、`Vibrator` |
+| 相机与传感器 | 摄像头存在声明、Camera2 前/后/外置方向与数量、最大像素摘要、闪光灯、自动对焦、四层摄像头详情、照片/视频尺寸、MP、焦距、光圈、对焦、ISO、曝光、OIS/EIS、RAW、HDR、逻辑/物理摄像头与静态/动态传感器能力 | `PackageManager`、Camera2、`SensorManager` |
+| 安全与运行状态 | SELinux 模式、引导程序版本、低内存设备标记、系统运行时长、时区、语言、字体缩放 | `/sys/fs/selinux`、`Build`、`ActivityManager`、`SystemClock` |
 | 屏幕测试 | 14 项纯色、灰阶、对比度、饱和度、触控、几何、渐变、闪烁辅助、拖影、残影、色域、视角等测试，含官方 Display P3 红色机器人图 | Android Canvas、MotionEvent、官方 P3 PNG |
 
 ## 界面与操作
 
-首页使用设备 Hero 和 CPU、GPU、RAM、存储、屏幕、电池六项核心指标卡，避免将原始日志直接铺满首屏。常用操作包括：
+首页使用设备 Hero 和 CPU、GPU、RAM、存储、屏幕、电池六项核心指标卡（CPU 卡显示核心数并附 SoC 型号，屏幕卡显示分辨率与当前刷新率），避免将原始日志直接铺满首屏。常用操作包括：
 
 - **搜索**：在当前已采集的本地数据中查找关键词，自动展开并定位对应模块；可搜索 GPU、Vulkan、DDR、电池、相机和传感器字段。
 - **刷新**：在单线程后台重新读取 NDK、EGL/OpenGL ES、Vulkan、Camera2、静态/动态传感器和 framework 数据；界面线程只更新采集完成后的不可变快照，并防止重复刷新；Activity 销毁后丢弃待回调结果。
-- **报告**：复制全部信息、调用系统分享、通过系统文件选择器导出 TXT，或导出包含 `device`、`system`、`cpu`、`gpu`、`display`、`memory`、`storage`、`battery`、`sensors`、`camera`、`vulkan` 与 `hardware` 分组的 JSON；每个事实字段包含 `value`、`source`、`confidence`。
-- **详细信息**：常规模块默认使用键值网格；内存/存储使用率和电池电量按本轮实际采集数值绘制轻量进度条，不生成性能评分；“技术原始数据”默认收起，集中保留内核节点、驱动原文和探测失败原因。
-- **来源说明**：点击任意来源/可信度标签，可查看该字段对应的 Android API、Camera2 metadata、OpenGL ES/Vulkan 驱动或 `/proc`、`/sys` 公开节点类别，以及相应的真实性边界。
+- **报告**：复制全部信息、调用系统分享、通过系统文件选择器导出 TXT，或导出包含 `device`、`system`、`cpu`、`gpu`、`display`、`memory`、`storage`、`battery`、`sensors`、`camera`、`vulkan`、`hardware` 与 `security` 分组的 JSON。`schema_version` 为 `3`：每个事实用稳定的英文 `key` 作为字段名（如 `ram_total`、`battery_design_capacity`），内部含 `label`、`value`、`source`、`confidence`，值为单一数量时另带 `number` 与 `unit`。`camera` 与 `sensors` 两组为层级化 `items` 数组（每个摄像头/传感器一个对象，字段均为英文 key），由采集层返回的结构化模型直接投影，不经过文本解析；`raw` 分组保留采集层同源渲染的原始文本。改界面文案不会改变导出的字段名。
+- **详细信息**：每个模块是一张可展开卡片，卡片内按子标题分组（如「基础 / 频率 / 位数与 ABI」「状态 / 容量与健康 / 电池硬件」）；行样式统一为“标签左、值右”的两栏列表，长值自动换行。逐核 CPU 频率等密集数据以「频率分布」「核心结构」摘要显示，原文保留在「技术原始数据」。已从界面移除的条目（ABI 分项、构建者/主机、内存颗粒厂商、10-bit、界面适配规则）仍保留在 JSON 报告中，TXT 报告与界面一致。
+- **来源说明**：每行行首的小色点代表数据来源（系统报告 / 驱动报告 / 内核公开值 / Camera2 / 估算 / 无法确认）；点击任意行可查看该字段对应的 Android API、驱动或 `/proc`、`/sys` 节点类别与真实性边界。内存/存储使用率和电池电量按本轮实际采集数值绘制轻量进度条，不生成性能评分。
 - **屏幕测试**：进入全屏测试；电视可使用遥控器方向键切换项目，手表使用小屏布局与双箭头控制。
 
 ## 数据来源与可信度
@@ -51,7 +53,7 @@
 | 驱动报告 | 当前图形驱动或 Camera2 metadata 直接返回 | `GL_RENDERER`、Vulkan 物理设备、相机 `LENS_FACING` |
 | 内核公开值 | 当前应用能够读取的 `/proc` 或 `/sys` 值 | CPUFreq、`power_supply` 电池厂商、DDR 原始候选字段 |
 | 估算 | 由明确公式从公开值计算，不等同于硬件实测 | 屏幕对角线估算、电量计的健康度估算 |
-| 无法确认 | 系统未公开或信息不能被普通应用可靠推断 | DRAM 颗粒厂商、面板物理型号、原生 10-bit 色深 |
+| 无法确认 | 系统未公开或信息不能被普通应用可靠推断 | DRAM 颗粒厂商、面板物理型号（EDID 不可读的设备）、原生 10-bit 色深 |
 
 架构字段组织参考了 [AndroidLowLevelDetector](https://github.com/imknown/AndroidLowLevelDetector)：Binder 位数通过只读 Binder 驱动的 `BINDER_VERSION` ioctl 判断（协议 7/8），当前进程 ABI 来自本 APK 实际加载的 NDK 库，当前系统 ABI 与 32/64 位支持列表来自 Android `Build` 公开字段。Binder 节点不存在、被拒绝或协议异常时显示无法确认，不依据品牌或 ABI 列表反推 Binder 位数。
 
@@ -89,7 +91,7 @@
 | 无法可靠直接读取的项目 | 原因与应用行为 |
 |---|---|
 | DDR 代际与 DRAM 颗粒厂商 | 仅在公开字段明确包含 `DDR`、`LPDDR` 或 `HBM` 时确认；动态频率、机型、SoC 名称和容量不用于推断。 |
-| 面板型号、供应商和原生 10-bit | Android 没有适用于普通应用的统一公开接口；HDR/广色域声明不被当作面板物理参数证明。 |
+| 面板型号、供应商和原生 10-bit | Android 没有统一公开接口。唯一可用的本地来源是 `/sys/class/drm/card0-DSI-1/edid`：可读时按 EDID 标准解码制造商 ID、产品代码、生产日期、原生分辨率与厘米尺寸；节点多被 SELinux 封闭，部分厂商还会写入模板值，因此解码结果只作参考。HDR/广色域声明不被当作面板物理参数证明。10-bit 一项不在界面展示，仅保留在导出报告中。 |
 | 色域覆盖率、色准、亮度、PWM 频率 | 屏幕图案为视觉观察工具；精确测量需要外部相机、示波器或色度计。 |
 | 电池真实化学健康度 | 仅在驱动同时公开 `charge_full` 和 `charge_full_design` 时计算电量计估算值，不宣称实验室测量结果。 |
 | 受权限限制的内核节点 | 保留实际不可读状态或错误原因；应用不尝试 root、`su` 或修改 SELinux。 |
@@ -128,11 +130,19 @@ sdk.dir=/path/to/Android/Sdk
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-建议在提交前执行完整验证：
+建议在提交前执行完整验证（含 JVM 单测）：
 
 ```bash
-./gradlew clean assembleDebug assembleRelease lintDebug lintRelease
+./gradlew clean testDebugUnitTest assembleDebug assembleRelease lintDebug lintRelease
 ```
+
+`app/src/test` 下的单元测试覆盖能力模型的 JSON 映射与文本渲染，无需设备或模拟器即可运行：
+
+```bash
+./gradlew testDebugUnitTest
+```
+
+仓库内置 GitHub Actions（`.github/workflows/android.yml`），推送或提交 PR 时自动执行单测、`assembleDebug` 与 `lintDebug`。
 
 ## 工程安全与性能
 
@@ -144,17 +154,34 @@ Release 默认启用 R8 和资源压缩。签名密钥只从仓库外的 Gradle 
 
 ```text
 app/
-├── src/main/cpp/                 # C/NDK：/proc、/sys、CPU、内存、电池、动态 Vulkan 探测
-├── src/main/java/.../            # Java：界面、EGL/OpenGL ES、Camera2、设备类型与屏幕测试
+├── src/main/cpp/                     # C/NDK：/proc、/sys、CPU、内存、电池、动态 Vulkan 探测
+├── src/main/java/.../                 # Java 源码（见下方拆分）
 ├── src/main/res/raw/android_p3.png   # 官方 Display P3 测试图
-├── src/main/res/drawable-nodpi/  # TV Leanback Banner
-└── build.gradle                  # SDK、ABI、CMake 与版本配置
-deliverables/                     # 当前构建验证记录与交付说明
+├── src/main/res/drawable-nodpi/       # TV Leanback Banner
+└── build.gradle                       # SDK、ABI、CMake 与版本配置
 ```
+
+Java 层按职责拆分，避免单一巨型 Activity：
+
+| 文件 | 职责 |
+|---|---|
+| `MainActivity` | 生命周期、后台线程与各 UI 部件的接线 |
+| `ProbeSnapshot` / `SectionBuilder` | 后台采集一次、解析为结构化分区（分组/去重/脚注） |
+| `CapabilityModel` / `CapabilityJson` | 能力枚举的结构化模型、同源文本渲染与 JSON 投影（纯 Java，可单测） |
+| `InfoModel` | 分区→分组→行的结构化数据模型与来源枚举 |
+| `Ui` | 统一色板、间距、圆角与交互背景 |
+| `DashboardUi` / `SectionUi` / `DialogsUi` | 首页仪表卡 / 详情分区卡片 / 对话框 |
+| `ExportUi` | 复制、分享、TXT 与 JSON 导出 |
+| `GpuProbe` / `VulkanProbe` / `CapabilityProbe` / `NativeBridge` | 各探针与 JNI 桥 |
+| `DeviceProfile` / `ScreenTestActivity` | 设备形态识别与全屏屏幕测试 |
 
 ## 版本与发布
 
-仓库主页只维护稳定的功能、边界、构建和使用说明。每次版本的新增功能、修复、兼容性变化、APK 校验值与下载附件均发布在 **[GitHub Releases](https://github.com/ZYJ882/android-device-probe/releases)**，不在本 README 中累积版本流水账。
+仓库主页只维护稳定的功能、边界、构建和使用说明。版本号按 [Semantic Versioning 2.0.0](https://semver.org/) 管理：向后兼容的新功能升级 Minor，仅含兼容的 Bug 修复升级 Patch，破坏公开接口或数据格式时升级 Major。每个版本的详细变更记录（新增、变更、修复、移除与兼容性说明）维护在仓库根目录 **[CHANGELOG.md](CHANGELOG.md)**；APK 校验值与下载附件发布在 **[GitHub Releases](https://github.com/ZYJ882/android-device-probe/releases)**，不在本 README 中累积版本流水账。
+
+## 许可证
+
+本项目以 [MIT License](LICENSE) 开源。`gradle/wrapper/gradle-wrapper.jar` 为 Gradle 官方发行组件，遵循其自身的 Apache License 2.0 条款。
 
 ## 参考资料
 

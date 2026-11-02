@@ -46,11 +46,13 @@ final class GpuProbe {
             append(out, "EGL 版本", version[0] + "." + version[1]);
             append(out, "GL_VENDOR", GLES20.glGetString(GLES20.GL_VENDOR));
             append(out, "GL_RENDERER", GLES20.glGetString(GLES20.GL_RENDERER));
-            append(out, "GL_VERSION", GLES20.glGetString(GLES20.GL_VERSION));
+            String glVersion = GLES20.glGetString(GLES20.GL_VERSION);
+            append(out, "GL_VERSION", glVersion);
             append(out, "GLSL 版本", GLES20.glGetString(GLES20.GL_SHADING_LANGUAGE_VERSION));
             String extensions = GLES20.glGetString(GLES20.GL_EXTENSIONS);
             String[] values = extensions == null || extensions.trim().isEmpty() ? new String[0] : extensions.trim().split("\\s+");
             append(out, "GL 扩展数量", String.valueOf(values.length));
+            append(out, "GL 纹理压缩", textureCompression(values, glVersion));
             append(out, "GL 扩展示例", firstExtensions(values, 12));
             append(out, "真实性说明", "这些是当前图形驱动在本应用 EGL 上下文中报告的值；若显示软件渲染器，也会如实显示。");
             return out.toString();
@@ -85,5 +87,34 @@ final class GpuProbe {
         }
         if (values.length > limit) out.append("；另有 ").append(values.length - limit).append(" 项");
         return out.toString();
+    }
+
+    /**
+     * Common compressed-texture formats actually reported by the driver. This is what
+     * decides whether a game can load its assets directly, which the raw extension
+     * count cannot answer. ETC2 is core in OpenGL ES 3.0 and therefore never appears
+     * in the extension list, so it is derived from GL_VERSION instead.
+     */
+    private static String textureCompression(String[] extensions, String glVersion) {
+        StringBuilder out = new StringBuilder();
+        if (glVersion != null && glVersion.contains("OpenGL ES 3")) appendToken(out, "ETC2");
+        if (hasExtension(extensions, "GL_KHR_texture_compression_astc_ldr")
+                || hasExtension(extensions, "GL_OES_texture_compression_astc")) appendToken(out, "ASTC");
+        if (hasExtension(extensions, "GL_EXT_texture_compression_s3tc")) appendToken(out, "S3TC/DXT");
+        if (hasExtension(extensions, "GL_AMD_compressed_ATC_texture")) appendToken(out, "ATC");
+        if (hasExtension(extensions, "GL_OES_compressed_ETC1_RGB8_texture")) appendToken(out, "ETC1");
+        return out.length() == 0 ? "驱动未报告常见压缩纹理扩展" : out.toString();
+    }
+
+    private static void appendToken(StringBuilder out, String value) {
+        if (out.length() > 0) out.append(" / ");
+        out.append(value);
+    }
+
+    private static boolean hasExtension(String[] extensions, String name) {
+        for (String extension : extensions) {
+            if (name.equals(extension)) return true;
+        }
+        return false;
     }
 }
