@@ -124,7 +124,19 @@ public final class MainActivity extends Activity
         privacy.setLineSpacing(ui.dp(2), 1.12f);
         privacy.setPadding(ui.dp(2), ui.dp(16), ui.dp(2), 0);
         root.addView(privacy);
+        animateEntrance(root);
         return scroll;
+    }
+
+    /** Staggers the static chrome in once; detail cards animate themselves when rendered. */
+    private void animateEntrance(LinearLayout root) {
+        int delay = 0;
+        for (int index = 0; index < root.getChildCount(); index++) {
+            View child = root.getChildAt(index);
+            if (child == sectionContainer) continue;
+            Motion.enter(child, delay, ui.dp(10));
+            delay += 40;
+        }
     }
 
     private View sectionTitle(String titleText, String detailText) {

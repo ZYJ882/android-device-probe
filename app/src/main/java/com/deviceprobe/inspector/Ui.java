@@ -22,8 +22,11 @@ final class Ui {
     static final int BACKGROUND = Color.rgb(9, 16, 29);
     static final int SURFACE = Color.rgb(17, 28, 47);
     static final int SURFACE_SOFT = Color.rgb(22, 37, 59);
+    static final int SURFACE_HIGH = Color.rgb(27, 44, 68);
     static final int SURFACE_PRESSED = Color.rgb(36, 72, 85);
     static final int SURFACE_FOCUS = Color.rgb(38, 73, 88);
+    static final int HAIRLINE = Color.rgb(38, 57, 85);
+    static final int MINT_TINT = Color.argb(30, 57, 216, 196);
     static final int TRACK = Color.rgb(31, 47, 70);
     static final int TEXT_PRIMARY = Color.rgb(240, 246, 252);
     static final int TEXT_SECONDARY = Color.rgb(161, 180, 205);
@@ -79,6 +82,24 @@ final class Ui {
         return drawable;
     }
 
+    /** A card surface: solid fill plus a hairline so it still reads on a dark background. */
+    Drawable card(int fill, int radius) {
+        return stroked(fill, HAIRLINE, radius, dp(1));
+    }
+
+    Drawable gradient(int top, int bottom, int radius) {
+        GradientDrawable drawable = new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM, new int[]{top, bottom});
+        drawable.setCornerRadius(radius);
+        return drawable;
+    }
+
+    /** A divider that fades out at both ends instead of stopping abruptly. */
+    Drawable fadeLine() {
+        return new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{Color.TRANSPARENT, HAIRLINE, Color.TRANSPARENT});
+    }
+
     Drawable ripple(int fill, int pressed, int radius) {
         return new RippleDrawable(ColorStateList.valueOf(pressed), rounded(fill, radius), null);
     }
@@ -93,6 +114,19 @@ final class Ui {
             return states;
         }
         return ripple(fill, highlight, radius);
+    }
+
+    /** Same as {@link #interactive} but keeps the hairline border, so buttons match the cards. */
+    Drawable interactiveCard(int fill, int highlight, int radius) {
+        if (tv()) {
+            StateListDrawable states = new StateListDrawable();
+            states.addState(new int[]{android.R.attr.state_focused}, stroked(highlight, MINT, radius, dp(2)));
+            states.addState(new int[]{android.R.attr.state_pressed}, rounded(highlight, radius));
+            states.addState(new int[]{}, stroked(fill, HAIRLINE, radius, dp(1)));
+            return states;
+        }
+        return new RippleDrawable(ColorStateList.valueOf(highlight),
+                stroked(fill, HAIRLINE, radius, dp(1)), null);
     }
 
     // ---------------------------------------------------------------- layout params

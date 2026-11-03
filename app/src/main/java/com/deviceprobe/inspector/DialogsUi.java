@@ -172,7 +172,7 @@ final class DialogsUi {
         LinearLayout panel = new LinearLayout(ui.context());
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setPadding(ui.dp(13), ui.dp(12), ui.dp(13), ui.dp(12));
-        panel.setBackground(ui.rounded(Ui.SURFACE, ui.dp(14)));
+        panel.setBackground(ui.card(Ui.SURFACE, ui.dp(14)));
         TextView heading = ui.text(title, 14, Ui.TEXT_PRIMARY, true);
         panel.addView(heading, ui.margins(Ui.matchParent(), Ui.wrapContent(), 0, 0, 0, ui.dp(7)));
         addCameraRows(panel, rows);

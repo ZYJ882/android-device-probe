@@ -69,7 +69,7 @@ final class DashboardUi {
         icon.setImageResource(R.mipmap.ic_launcher);
         icon.setScaleType(ImageView.ScaleType.CENTER_CROP);
         icon.setContentDescription("设备探查器图标");
-        icon.setBackground(ui.rounded(Ui.SURFACE_SOFT, ui.dp(15)));
+        icon.setBackground(ui.stroked(Ui.SURFACE_SOFT, Ui.HAIRLINE, ui.dp(15), ui.dp(1)));
         icon.setPadding(ui.dp(3), ui.dp(3), ui.dp(3), ui.dp(3));
         int iconSize = ui.watch() ? ui.dp(40) : ui.dp(48);
         bar.addView(icon, ui.fixed(iconSize, iconSize));
@@ -87,15 +87,32 @@ final class DashboardUi {
         tools.setOrientation(LinearLayout.HORIZONTAL);
         bar.addView(tools, ui.fixed(Ui.wrapContent(), Ui.wrapContent()));
         int toolWidth = ui.watch() ? ui.dp(46) : ui.dp(54);
+        int toolGap = ui.watch() ? ui.dp(4) : ui.dp(8);
+
         TextView search = compactAction("搜索");
-        search.setOnClickListener(v -> host.onSearchDialogRequested());
+        search.setOnClickListener(v -> {
+            Motion.tap(v);
+            host.onSearchDialogRequested();
+        });
         tools.addView(search, ui.fixed(toolWidth, ui.dp(40)));
+
         refreshButton = compactAction("刷新");
-        refreshButton.setOnClickListener(v -> host.onRefreshRequested());
-        tools.addView(refreshButton, ui.fixed(toolWidth, ui.dp(40)));
+        refreshButton.setOnClickListener(v -> {
+            Motion.tap(v);
+            host.onRefreshRequested();
+        });
+        LinearLayout.LayoutParams refreshParams = ui.fixed(toolWidth, ui.dp(40));
+        refreshParams.setMargins(toolGap, 0, 0, 0);
+        tools.addView(refreshButton, refreshParams);
+
         TextView report = compactAction("报告");
-        report.setOnClickListener(v -> host.onReportMenuRequested());
-        tools.addView(report, ui.fixed(toolWidth, ui.dp(40)));
+        report.setOnClickListener(v -> {
+            Motion.tap(v);
+            host.onReportMenuRequested();
+        });
+        LinearLayout.LayoutParams reportParams = ui.fixed(toolWidth, ui.dp(40));
+        reportParams.setMargins(toolGap, 0, 0, 0);
+        tools.addView(report, reportParams);
         return bar;
     }
 
@@ -106,7 +123,7 @@ final class DashboardUi {
         button.setFocusable(true);
         button.setFocusableInTouchMode(ui.tv());
         button.setContentDescription(text + "设备信息");
-        button.setBackground(ui.interactive(Ui.SURFACE_SOFT, Ui.SURFACE_FOCUS, ui.dp(12)));
+        button.setBackground(ui.interactiveCard(Ui.SURFACE_SOFT, Ui.SURFACE_FOCUS, ui.dp(12)));
         return button;
     }
 
@@ -114,12 +131,14 @@ final class DashboardUi {
         LinearLayout hero = new LinearLayout(ui.context());
         hero.setOrientation(LinearLayout.VERTICAL);
         hero.setPadding(ui.dp(18), ui.dp(17), ui.dp(18), ui.dp(16));
-        hero.setBackground(ui.rounded(Ui.SURFACE, ui.dp(22)));
-        hero.setElevation(ui.dp(1));
+        hero.setBackground(ui.gradient(Ui.SURFACE_HIGH, Ui.SURFACE, ui.dp(22)));
+        hero.setElevation(ui.dp(2));
 
         TextView label = ui.text("当前设备", 11, Ui.MINT, true);
         label.setLetterSpacing(0.08f);
-        hero.addView(label);
+        label.setBackground(ui.rounded(Ui.MINT_TINT, ui.dp(8)));
+        label.setPadding(ui.dp(9), ui.dp(3), ui.dp(9), ui.dp(3));
+        hero.addView(label, ui.fixed(Ui.wrapContent(), Ui.wrapContent()));
 
         heroNameView = ui.text("正在读取设备信息…", ui.watch() ? 19 : 25, Ui.TEXT_PRIMARY, true);
         heroNameView.setMaxLines(2);
@@ -162,7 +181,7 @@ final class DashboardUi {
         LinearLayout tile = new LinearLayout(ui.context());
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setPadding(ui.dp(14), ui.dp(13), ui.dp(14), ui.dp(13));
-        tile.setBackground(ui.rounded(Ui.SURFACE, ui.dp(18)));
+        tile.setBackground(ui.card(Ui.SURFACE, ui.dp(18)));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, ui.dp(112), 1f);
         if (second) params.setMargins(ui.dp(10), 0, 0, 0);
         parent.addView(tile, params);
@@ -189,7 +208,7 @@ final class DashboardUi {
         LinearLayout tile = new LinearLayout(ui.context());
         tile.setOrientation(LinearLayout.VERTICAL);
         tile.setPadding(ui.dp(14), ui.dp(11), ui.dp(14), ui.dp(11));
-        tile.setBackground(ui.rounded(Ui.SURFACE, ui.dp(17)));
+        tile.setBackground(ui.card(Ui.SURFACE, ui.dp(17)));
         parent.addView(tile, ui.margins(Ui.matchParent(), ui.dp(86), 0, topMargin, 0, 0));
 
         tile.addView(ui.text(title, 11, Ui.TEXT_SECONDARY, true));
@@ -265,8 +284,11 @@ final class DashboardUi {
         item.setClickable(true);
         item.setFocusable(true);
         item.setFocusableInTouchMode(ui.tv());
-        item.setBackground(ui.interactive(Ui.SURFACE_SOFT, Ui.SURFACE_PRESSED, ui.dp(16)));
-        item.setOnClickListener(listener);
+        item.setBackground(ui.interactiveCard(Ui.SURFACE_SOFT, Ui.SURFACE_PRESSED, ui.dp(16)));
+        item.setOnClickListener(v -> {
+            Motion.tap(v);
+            listener.onClick(v);
+        });
 
         LinearLayout texts = new LinearLayout(ui.context());
         texts.setOrientation(LinearLayout.VERTICAL);
@@ -288,8 +310,11 @@ final class DashboardUi {
         button.setClickable(true);
         button.setFocusable(true);
         button.setFocusableInTouchMode(ui.tv());
-        button.setBackground(ui.interactive(Ui.SURFACE_SOFT, Ui.SURFACE_PRESSED, ui.dp(15)));
-        button.setOnClickListener(v -> host.onDeviceModeCorrectionRequested());
+        button.setBackground(ui.interactiveCard(Ui.SURFACE_SOFT, Ui.SURFACE_PRESSED, ui.dp(15)));
+        button.setOnClickListener(v -> {
+            Motion.tap(v);
+            host.onDeviceModeCorrectionRequested();
+        });
         return button;
     }
 
@@ -302,7 +327,10 @@ final class DashboardUi {
             refreshButton.setText(busy ? "检测中" : "刷新");
             refreshButton.setAlpha(busy ? 0.6f : 1f);
         }
-        if (busy && statusView != null) statusView.setText("正在后台读取本机公开信息…");
+        if (busy && statusView != null) {
+            statusView.setText("正在后台读取本机公开信息…");
+            Motion.pulse(statusView);
+        }
     }
 
     void applySnapshot(ProbeSnapshot snapshot) {
@@ -333,6 +361,11 @@ final class DashboardUi {
         metrics[5].value.setText(charge);
         metrics[5].detail.setText(shortValue(status, 18));
         metrics[5].value.setTextColor(batteryColor(charge, status));
+
+        Motion.pulse(heroNameView);
+        for (MetricCard metric : metrics) {
+            if (metric != null) Motion.pulse(metric.value);
+        }
     }
 
     private String devicePatchText() {
@@ -341,7 +374,10 @@ final class DashboardUi {
     }
 
     void setStatus(String status) {
-        if (statusView != null) statusView.setText(status);
+        if (statusView != null) {
+            statusView.setText(status);
+            Motion.pulse(statusView);
+        }
     }
 
     // ---------------------------------------------------------------- helpers

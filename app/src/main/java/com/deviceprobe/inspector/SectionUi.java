@@ -52,6 +52,7 @@ final class SectionUi {
     private final ScrollView scroll;
     private final LinearLayout container;
     private final List<SectionCard> cards = new ArrayList<>();
+    private boolean firstRender = true;
 
     SectionUi(Ui ui, Host host, ScrollView scroll, LinearLayout container) {
         this.ui = ui;
@@ -66,17 +67,23 @@ final class SectionUi {
         container.removeAllViews();
         cards.clear();
         boolean first = true;
+        int index = 0;
         for (InfoModel.Section section : snapshot.sections) {
             addSection(section, first);
             first = false;
+            if (firstRender && index < cards.size()) {
+                Motion.enter(cards.get(index).root, Math.min(index, 6) * 40L, ui.dp(8));
+            }
+            index++;
         }
+        firstRender = false;
     }
 
     private void addSection(InfoModel.Section section, boolean expandedInitially) {
         LinearLayout card = new LinearLayout(ui.context());
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(ui.dp(16), ui.dp(13), ui.dp(16), ui.dp(13));
-        card.setBackground(ui.rounded(Ui.SURFACE, ui.dp(20)));
+        card.setBackground(ui.card(Ui.SURFACE, ui.dp(20)));
         card.setElevation(ui.dp(1));
 
         LinearLayout header = new LinearLayout(ui.context());
@@ -155,8 +162,11 @@ final class SectionUi {
             action.setFocusable(true);
             action.setFocusableInTouchMode(ui.tv());
             action.setPadding(ui.dp(12), 0, ui.dp(12), 0);
-            action.setBackground(ui.interactive(Ui.SURFACE_SOFT, Ui.SURFACE_PRESSED, ui.dp(13)));
-            action.setOnClickListener(v -> host.onSectionAction(actionId));
+            action.setBackground(ui.interactiveCard(Ui.SURFACE_SOFT, Ui.SURFACE_PRESSED, ui.dp(13)));
+            action.setOnClickListener(v -> {
+                Motion.tap(v);
+                host.onSectionAction(actionId);
+            });
             content.addView(action, ui.margins(Ui.matchParent(), ui.dp(38), 0, ui.dp(12), 0, 0));
         }
     }
@@ -169,7 +179,7 @@ final class SectionUi {
 
     private View divider() {
         View line = new View(ui.context());
-        line.setBackgroundColor(Ui.SURFACE_SOFT);
+        line.setBackground(ui.fadeLine());
         return line;
     }
 
@@ -257,10 +267,11 @@ final class SectionUi {
         int percent = Math.max(0, Math.min(100, row.progress));
         View fill = new View(ui.context());
         fill.setBackground(ui.rounded(progressColor(percent), ui.dp(5)));
-        track.addView(fill, new LinearLayout.LayoutParams(0, ui.dp(7), Math.max(1, percent)));
+        track.addView(fill, new LinearLayout.LayoutParams(0, ui.dp(7), 0f));
         View remaining = new View(ui.context());
         track.addView(remaining, new LinearLayout.LayoutParams(0, ui.dp(7), Math.max(1, 100 - percent)));
         track.setLayoutParams(ui.margins(Ui.matchParent(), ui.dp(7), ui.dp(15), ui.dp(5), 0, 0));
+        Motion.animateProgress(fill, Math.max(1, percent), 560L);
         return track;
     }
 
@@ -284,22 +295,33 @@ final class SectionUi {
     // ---------------------------------------------------------------- behaviour
 
     private void setExpanded(SectionCard card, boolean expanded) {
+        if (card.expanded == expanded) return;
         card.expanded = expanded;
-        card.content.setVisibility(expanded ? View.VISIBLE : View.GONE);
         card.toggle.setText(expanded ? "收起  −" : "查看  ›");
+        Motion.pulse(card.toggle);
+        if (expanded) {
+            Motion.expand(card.content, 240L);
+        } else {
+            Motion.collapse(card.content, 200L);
+        }
+    }
+
+    private void scrollTo(SectionCard card, long delayMs) {
+        card.root.postDelayed(() -> {
+            int[] target = new int[2];
+            int[] origin = new int[2];
+            card.root.getLocationOnScreen(target);
+            scroll.getLocationOnScreen(origin);
+            scroll.smoothScrollBy(0, target[1] - origin[1] - ui.dp(12));
+        }, delayMs);
     }
 
     void navigateTo(String title) {
         for (SectionCard card : cards) {
             if (!title.equals(card.title)) continue;
+            boolean wasExpanded = card.expanded;
             setExpanded(card, true);
-            card.root.post(() -> {
-                int[] target = new int[2];
-                int[] origin = new int[2];
-                card.root.getLocationOnScreen(target);
-                scroll.getLocationOnScreen(origin);
-                scroll.smoothScrollBy(0, target[1] - origin[1] - ui.dp(12));
-            });
+            scrollTo(card, wasExpanded ? 0L : 260L);
             return;
         }
     }
@@ -308,29 +330,25 @@ final class SectionUi {
     int applySearch(String query) {
         String normalized = query.trim().toLowerCase(Locale.US);
         SectionCard first = null;
+        long firstDelay = 0L;
         int count = 0;
         for (SectionCard card : cards) {
             boolean match = card.searchableText.toLowerCase(Locale.US).contains(normalized);
-            card.root.setAlpha(match ? 1f : 0.46f);
+            Motion.fadeTo(card.root, match ? 1f : 0.46f, 220L);
             if (!match) continue;
+            boolean wasExpanded = card.expanded;
             setExpanded(card, true);
             count++;
-            if (first == null) first = card;
+            if (first == null) {
+                first = card;
+                firstDelay = wasExpanded ? 0L : 260L;
+            }
         }
-        if (first != null) {
-            final SectionCard target = first;
-            target.root.post(() -> {
-                int[] targetLocation = new int[2];
-                int[] origin = new int[2];
-                target.root.getLocationOnScreen(targetLocation);
-                scroll.getLocationOnScreen(origin);
-                scroll.smoothScrollBy(0, targetLocation[1] - origin[1] - ui.dp(12));
-            });
-        }
+        if (first != null) scrollTo(first, firstDelay);
         return count;
     }
 
     void clearHighlight() {
-        for (SectionCard card : cards) card.root.setAlpha(1f);
+        for (SectionCard card : cards) Motion.fadeTo(card.root, 1f, 220L);
     }
 }
